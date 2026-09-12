@@ -1,0 +1,1 @@
+/subsystem=datasources/data-source=CoursConnectDS:write-attribute(name=connection-url,value="jdbc:mysql://coursconnect-db:3306/coursconnect?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8")

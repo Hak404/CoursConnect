@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+                                 https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="coursconnectPU" transaction-type="JTA">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <jta-data-source>java:jboss/datasources/CoursConnectDS</jta-data-source>
+
+        <class>com.coursconnect.model.User</class>
+        <class>com.coursconnect.model.UserSession</class>
+        <class>com.coursconnect.model.Student</class>
+        <class>com.coursconnect.model.Professor</class>
+        <class>com.coursconnect.model.City</class>
+        <class>com.coursconnect.model.Subject</class>
+        <class>com.coursconnect.model.Level</class>
+        <class>com.coursconnect.model.Offer</class>
+        <class>com.coursconnect.model.Availability</class>
+        <class>com.coursconnect.model.Booking</class>
+        <class>com.coursconnect.model.Review</class>
+        <class>com.coursconnect.model.Notification</class>
+
+        <class>com.coursconnect.model.Professeur</class>
+        <class>com.coursconnect.model.Matiere</class>
+        <class>com.coursconnect.model.Niveau</class>
+
+        <properties>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+            <property name="hibernate.physical_naming_strategy" value="org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"/>
+        </properties>
+    </persistence-unit>
+
+</persistence>
