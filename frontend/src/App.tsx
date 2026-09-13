@@ -14,7 +14,14 @@ import StudentBookings from './pages/student/StudentBookings';
 import BookingDetail from './pages/student/BookingDetail';
 import StudentProfilePage from './pages/student/Profile';
 import Notifications from './pages/student/Notifications';
-import ProfessorDashboard from './pages/professor/Dashboard';
+import ProfessorHome from './pages/professor/Home';
+import ProfessorBookings from './pages/professor/ProfessorBookings';
+import ProfessorBookingDetail from './pages/professor/ProfessorBookingDetail';
+import ProfessorNotifications from './pages/professor/ProfessorNotifications';
+import ProfessorProfile from './pages/professor/ProfessorProfile';
+import ProfessorOffers from './pages/professor/ProfessorOffers';
+import ProfessorOfferForm from './pages/professor/ProfessorOfferForm';
+import ProfessorAvailability from './pages/professor/ProfessorAvailability';
 import AdminDashboard from './pages/admin/Dashboard';
 import Favoris from './pages/Favoris';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -47,7 +54,15 @@ function AppChrome() {
           <Route path="/student/reservations/:id" element={<ProtectedRoute roles={['STUDENT']}><BookingDetail /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute roles={['STUDENT']}><StudentProfilePage /></ProtectedRoute>} />
           <Route path="/student/notifications" element={<ProtectedRoute roles={['STUDENT']}><Notifications /></ProtectedRoute>} />
-          <Route path="/professor" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorDashboard /></ProtectedRoute>} />
+          <Route path="/professor" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorHome /></ProtectedRoute>} />
+          <Route path="/professor/reservations" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorBookings /></ProtectedRoute>} />
+          <Route path="/professor/reservations/:id" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorBookingDetail /></ProtectedRoute>} />
+          <Route path="/professor/notifications" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorNotifications /></ProtectedRoute>} />
+          <Route path="/professor/profile" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorProfile /></ProtectedRoute>} />
+          <Route path="/professor/offers" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorOffers /></ProtectedRoute>} />
+          <Route path="/professor/offers/new" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorOfferForm /></ProtectedRoute>} />
+          <Route path="/professor/offers/:id/edit" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorOfferForm /></ProtectedRoute>} />
+          <Route path="/professor/availability" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorAvailability /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/favoris" element={<ProtectedRoute roles={['STUDENT']}><Favoris /></ProtectedRoute>} />
         </Routes>

@@ -20,9 +20,6 @@ import java.util.List;
 @PreMatching
 public class AuthFilter implements ContainerRequestFilter {
 
-    private static final String ALLOWED_ORIGINS =
-            System.getenv().getOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173");
-
     private static final List<String> PUBLIC_PATHS = List.of(
         "/cities",
         "/subjects",
@@ -46,14 +43,16 @@ public class AuthFilter implements ContainerRequestFilter {
 
         // Handle CORS preflight OPTIONS directly (no matching JAX-RS @OPTIONS method exists)
         if ("OPTIONS".equalsIgnoreCase(method)) {
-            requestContext.abortWith(
-                jakarta.ws.rs.core.Response.status(204)
-                    .header("Access-Control-Allow-Origin", ALLOWED_ORIGINS)
+            jakarta.ws.rs.core.Response.ResponseBuilder builder = jakarta.ws.rs.core.Response.status(204)
                     .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
                     .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
                     .header("Access-Control-Allow-Credentials", "true")
-                    .header("Access-Control-Max-Age", "3600")
-                    .build());
+                    .header("Access-Control-Max-Age", "3600");
+            String origin = CorsConfig.resolveOrigin(requestContext.getHeaderString("Origin"));
+            if (origin != null) {
+                builder.header("Access-Control-Allow-Origin", origin);
+            }
+            requestContext.abortWith(builder.build());
             return;
         }
 

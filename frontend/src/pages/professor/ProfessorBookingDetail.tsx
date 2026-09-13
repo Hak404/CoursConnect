@@ -263,7 +263,7 @@ export default function ProfessorBookingDetail() {
                     >
                       <option value="">— Sélectionner —</option>
                       {MEETING_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                      {(booking.meetingPlatform && !MEETING_PLATFORMS.includes(booking.meetingPlatform)) && (
+                      {(booking.meetingPlatform && !MEETING_PLATFORMS.includes(booking.meetingPlatform as never)) && (
                         <option value={booking.meetingPlatform}>{booking.meetingPlatform}</option>
                       )}
                     </Select>

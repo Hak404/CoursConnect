@@ -10,8 +10,8 @@ release.properties
 node_modules/
 dist/
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # IDE
 .idea/

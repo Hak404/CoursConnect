@@ -6,7 +6,9 @@ import type {
   NotificationItem, AdminStats, ProfileBooking,
 } from '../types';
 
-const API_BASE = '/api';
+const API_BASE: string = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || '/api';
+
+export const getApiBase = (): string => API_BASE;
 
 const NETWORK_ERROR_MESSAGE = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
 const SERVICE_UNAVAILABLE_MESSAGE = 'Le service est temporairement indisponible. Veuillez réessayer.';

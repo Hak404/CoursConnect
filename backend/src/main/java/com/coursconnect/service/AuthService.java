@@ -50,14 +50,15 @@ public class AuthService {
     private LevelRepository levelRepository;
 
     public AuthResponseDTO registerStudent(RegisterStudentDTO dto) {
-        if (userRepository.findByEmail(dto.getEmail()) != null) {
+        String email = normalizeEmail(dto.getEmail());
+        if (userRepository.findByEmail(email) != null) {
             throw new ConflictException("Cet email est déjà utilisé");
         }
 
         User user = new User();
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
-        user.setEmail(dto.getEmail());
+        user.setEmail(email);
         user.setPasswordHash(PasswordUtil.hashPassword(dto.getPassword()));
         user.setPhone(dto.getPhone());
         user.setRole(Role.STUDENT);
@@ -76,14 +77,15 @@ public class AuthService {
     }
 
     public AuthResponseDTO registerProfessor(RegisterProfessorDTO dto) {
-        if (userRepository.findByEmail(dto.getEmail()) != null) {
+        String email = normalizeEmail(dto.getEmail());
+        if (userRepository.findByEmail(email) != null) {
             throw new ConflictException("Cet email est déjà utilisé");
         }
 
         User user = new User();
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
-        user.setEmail(dto.getEmail());
+        user.setEmail(email);
         user.setPasswordHash(PasswordUtil.hashPassword(dto.getPassword()));
         user.setPhone(dto.getPhone());
         user.setRole(Role.PROFESSOR);
@@ -121,7 +123,7 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginDTO dto) {
-        User user = userRepository.findByEmail(dto.getEmail());
+        User user = userRepository.findByEmail(normalizeEmail(dto.getEmail()));
         if (user == null) {
             throw new UnauthorizedException("Email ou mot de passe incorrect");
         }
@@ -168,5 +170,9 @@ public class AuthService {
         dto.setEnabled(user.isEnabled());
         dto.setCreatedAt(user.getCreatedAt());
         return dto;
+    }
+
+    private static String normalizeEmail(String email) {
+        return email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

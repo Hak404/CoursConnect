@@ -75,17 +75,15 @@ public class UserRepository {
     }
 
     public void invalidateSession(String token) {
-        TypedQuery<UserSession> q = em.createQuery(
-            "DELETE FROM UserSession s WHERE s.token = :token", UserSession.class);
-        q.setParameter("token", token);
-        q.executeUpdate();
+        em.createQuery("DELETE FROM UserSession s WHERE s.token = :token")
+                .setParameter("token", token)
+                .executeUpdate();
     }
 
     public void invalidateAllSessions(User user) {
-        TypedQuery<UserSession> q = em.createQuery(
-            "DELETE FROM UserSession s WHERE s.user = :user", UserSession.class);
-        q.setParameter("user", user);
-        q.executeUpdate();
+        em.createQuery("DELETE FROM UserSession s WHERE s.user = :user")
+                .setParameter("user", user)
+                .executeUpdate();
     }
 
     public long countAll() {

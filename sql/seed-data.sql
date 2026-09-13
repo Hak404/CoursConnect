@@ -49,9 +49,9 @@ INSERT INTO levels (name, description, display_order) VALUES
 -- SEED DATA: USERS (passwords are PBKDF2 hashes of "password123")
 -- ============================================================
 
--- Admin user
-INSERT INTO users (first_name, last_name, email, password_hash, phone, role, enabled) VALUES
-('Admin', 'CoursConnect', 'admin@coursconnect.fr', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0524000000', 'ADMIN', TRUE);
+-- Admin user is NOT seeded with a default password for security: it is provisioned
+-- at startup by AdminBootstrap from ADMIN_EMAIL / ADMIN_PASSWORD environment variables
+-- (see docker-compose.yml). No default admin account is created here.
 
 -- Professor users (IDs 2-11)
 INSERT INTO users (first_name, last_name, email, password_hash, phone, role, enabled) VALUES

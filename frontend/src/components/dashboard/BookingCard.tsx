@@ -50,7 +50,7 @@ export default function BookingCard({ booking, defaultPlatform, onUpdated }: Boo
   const [rejectReason, setRejectReason] = useState('');
   const [rejectSaving, setRejectSaving] = useState(false);
 
-  async function refresh(cb?: () => Promise<void>) {
+  async function refresh(cb?: () => Promise<unknown>) {
     try {
       await cb?.();
     } catch (err) {

@@ -9,7 +9,7 @@ import Icon from '../../components/ui/Icon';
 import StatCard from '../../components/ui/StatCard';
 import StatusBadge from '../../components/ui/StatusBadge';
 import {
-  getMyProfessorProfile, getMyProfessorBookings, getMyOffers, getProfessorProposals, getMyReviews,
+  getMyProfessorProfile, getMyProfessorBookings, getMyOffers, getProfessorProposals,
 } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
@@ -17,7 +17,7 @@ import {
   formatDateFR, formatTimeFR, formatDateTimeRange, formatCourseType, formatLocationType,
   isSafeMeetingUrl, safeMeetingUrl,
 } from '../../utils/labels';
-import type { ProfessorProfile, Booking, Offer, PriceProposal, Review } from '../../types';
+import type { ProfessorProfile, Booking, Offer, PriceProposal } from '../../types';
 
 function UpcomingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void }) {
   const online = booking.locationType === 'ONLINE';
@@ -72,7 +72,6 @@ export default function ProfessorHome() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [proposals, setProposals] = useState<PriceProposal[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -82,15 +81,13 @@ export default function ProfessorHome() {
       getMyProfessorBookings(),
       getMyOffers(),
       getProfessorProposals(),
-      getMyReviews(),
     ])
-      .then(([p, b, o, pr, rv]) => {
+      .then(([p, b, o, pr]) => {
         if (!mounted) return;
         setProfile(p);
         setBookings(b);
         setOffers(o);
         setProposals(pr);
-        setReviews(rv);
       })
       .catch(() => {})
       .finally(() => mounted && setLoading(false));

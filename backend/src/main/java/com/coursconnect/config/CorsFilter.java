@@ -10,12 +10,14 @@ import java.io.IOException;
 @Provider
 public class CorsFilter implements ContainerResponseFilter {
 
-    private static final String ALLOWED_ORIGINS = System.getenv().getOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173");
-
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
         MultivaluedMap<String, Object> headers = responseContext.getHeaders();
-        headers.add("Access-Control-Allow-Origin", ALLOWED_ORIGINS);
+        String origin = CorsConfig.resolveOrigin(requestContext.getHeaderString("Origin"));
+        if (origin != null) {
+            headers.add("Access-Control-Allow-Origin", origin);
+        }
+        headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
         headers.add("Access-Control-Allow-Credentials", "true");

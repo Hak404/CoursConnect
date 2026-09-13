@@ -1,63 +1,70 @@
-# Rapport final — Cours en ligne : lien de séance par réservation + Tableau de bord élève
+# Rapport final — Compte administrateur weborax.dev@gmail.com + Préparation/déploiement frontend Vercel
 
-## Bugs trouvés et corrigés
+## 1. Système d'authentification existant (réutilisé, aucun nouveau mécanisme)
+- **Stockage** : `users` (email unique, `password_hash` PBKDF2 `iterations:sel:hash` via `PasswordUtil`, `role` enum `STUDENT/PROFESSOR/ADMIN`, `enabled`).
+- **Sessions** : `user_sessions` — token aléatoire 32 octets (URL-safe base64), validité 7 j, stocké en base (pas de JWT signé).
+- **Vérification du rôle côté serveur** : `AuthFilter` (Bearer token → `CurrentUserHolder`) puis chaque ressource contrôle le rôle — `AdminResource.requireAdmin()` = `user.getRole() == Role.ADMIN`, sinon `ForbiddenException` (403). Les routes admin (`/admin/*`) sont **protégées côté backend** ; le frontend ne fait que masquer/afficher le menu (Header « Administration » + `ProtectedRoute roles={['ADMIN']}`).
 
-1. **Lien de réunion lié à l'offre (mauvais modèle)** : config de séance (`meetingLink`/`meetingInstructions`) portée par l'offre, snapshot à l'acceptation → exposée publiquement + rigidité (un lien pour toutes les réservations de l'offre). **Correction** : le lien est désormais **rattaché à la réservation uniquement** et saisi après acceptation ; l'offre ne garde que sa **plateforme préférée** (publique, non sensible). `OfferDTO` sans aucun champ lien/instructions (clés totalement absentes du JSON).
-2. **Liens non-HTTPS acceptés** : `isHttpUrl` acceptait `http://`, `javascript:`, `data:`, `file:`, chaînes arbitraires. **Correction** : `UrlValidator.isHttpsUrl` (https:// strict) utilisé pour les liens de séance — DTO 400 « Le lien de la réunion doit être une URL https valide (ex : https://zoom.us/j/...) » (vérifié : `http://`, `javascript:alert(1)` → 400).
-3. **Accès non contrôlé aux informations de séance** : pas d'endpoint de lecture d'une réservation. **Correction** : `GET /bookings/{id}` sécurisé (étudiant propriétaire OU professeur propriétaire, sinon 403/404) ; lien/instructions toujours masqués tant que le statut n'est pas ACCEPTED/COMPLETED.
-4. **Créneau de saisie du lien mal placé** : 3 champs dans la modal d'acceptation (rejetés après coup). **Correction** : modal d'acceptation allégée (confirmation simple + rappel « le lien sera ajouté après acceptation ») ; nouvelle zone dédiée « Lien du cours en ligne » sur chaque réservation confirmée/terminée (éditeur inline plateforme/lien/instructions + Enregistrer/Supprimer).
-5. **Card booking sous-équipées (côté élève)** : aucune info professeur (photo, note, nb avis), matières/niveaux manquants, ni URL dédiée. **Correction** : `BookingResponseDTO` enrichi (`professorProfilePhoto`, `professorRating`, `professorReviewCount`, `subjectLabel`, `levelLabel`) + GET détail.
-6. **Filtres « Mes Réservations » incohérents** : onglet « Refusées » séparé et « Confir­mées » sans relation au temps. **Correction** (UX validée utilisateur) : onglets Toutes / En attente / **Confirmées** (= ACCEPTED, toutes dates) / **À venir** (= PENDING ou ACCEPTED dans le futur) / Terminées / **Annulées** (= CANCELLED **+ REJECTED**, badges distincts) ; filtre reflété dans l'URL (`?filter=`) pour les liens profonds.
-7. **Dashboard élève monolithique** (onglets dans une seule page). **Correction** : refonte routée — `/student` (accueil résumé), `/student/reservations`, `/student/reservations/:id` (page détail), `/student/profile`, `/student/notifications` + `/favoris`, avec sidebar commune (DashboardShell réutilisé).
-8. **Overflow header de carte à 360 px** : bouton « Tout marquer comme lu » (Notifications) débordait (scrollW 367). **Correction** : `flex-wrap: wrap` sur `.dash-card__title`.
-9. **En-tête d'accueil redondant** : le texte du hero répétait le prénom « … ». **Correction** : salutation « Bonjour {prénom} » + phrase neutre.
-10. **Prélèvement du lien effacé silencieusement lors de l'opération PowerShell** (mojibake cp1252) — voir « Régressions surveillées ».
+## 2. Admin
+- **Email configuré** : `weborax.dev@gmail.com` (id=1, compte seed fusionné — l'ancien `admin@coursconnect.fr` a été remappé vers cet email puis le doublon temporaire créé par le bootstrap a été supprimé → un seul compte ADMIN).
+- **Rôle confirmé côté backend** : `role = ADMIN`, `enabled = true` (vérifié en base et via `POST /auth/login` → `role=ADMIN`).
+- **Méthode de création/config (sécurisée, sans password hardcodé)** : nouveau `AdminBootstrap` (`@Startup @Singleton` EJB auto-découvert) qui lit les variables d'environnement **`ADMIN_EMAIL`** + **`ADMIN_PASSWORD`** (docker-compose `wildfly.environment` ← `.env` racine gitignoré) :
+  - **idempotent** à chaque démarrage : recherche par email → crée si absent (uniquement si `ADMIN_PASSWORD` est fourni, sinon skip), sinon garantit `role=ADMIN` + `enabled`, et ré-applique le hash si `ADMIN_PASSWORD` est fournie.
+  - `seed-data.sql` ne crée **plus d'admin par défaut** (l'admin `admin@coursconnect.fr` à mot de passe connu a été retiré) → aucune backdoor confidence dans les environnements frais.
+- **Normalisation email** : `trim` + `lowercase` au fork des DTO (`setEmail`) + `AuthService.normalizeEmail` + bootstrap. Vérifié : login `"  WEBORAX.DEV@GMAIL.COM "` → **200**.
+- **Sécurité** : aucun secret dans Git (`.env` ignoré, vérifié `git check-ignore .env`), aucun secret dans `VITE_*`, aucun `ADMIN_PASSWORD = "..."` dans le code.
 
-## Implémenté
+## 3. Bug corrigé au passage (logout)
+- `UserRepository.invalidateSession/invalidateAllSessions` utilisaient `em.createQuery("DELETE ...", UserSession.class)` → Hibernate 6 lance `IllegalQueryOperationException` (« Result type given for a non-SELECT Query ») → **logout 500** et session jamais invalidée. Correctif : `createQuery(...)` **sans type de résultat**. Vérifié : logout → 200 puis `GET /auth/me` avec le même token → **401**.
 
-### Backend (déployé WildFly 8081, REDÉPLOYÉ `--force`)
-- `UrlValidator.isHttpsUrl` (https strict) ; `UrlValidatorTest` + `meetingLinkMustBeHttps` (7 tests UrlValidator).
-- `OfferDTO` : retrait `meetingLink`/`meetingInstructions` (getters/setters) ; `OfferService.applyDto` ignore ces champs (null) — seule `meetingPlatform` reste publique.
-- `MeetingConfigDTO` (meetingLink ≤500 / meetingPlatform ≤50 / meetingInstructions ≤2000) pour `PUT /bookings/{id}/meeting`.
-- `BookingAcceptDTO` réduit à `meetingLocation` (≤500) ; `BookingService.accept()` : + aucune gestion de séance en ligne (override `meetingLocation` PROFESSOR_HOME conservé).
-- `BookingService.saveMeetingConfig` (en ligne seulement, ACCEPTED/COMPLETED seulement, https strict, notification étudiant « Lien de votre cours en ligne » via la file existante) ; `deleteMeetingConfig` (nettoie link+instructions, conserve platform) ; `getParticipantBooking` (ownership étudiant OU professeur).
-- `BookingResponseDTO.toDTO` enrichi : `professorRating`, `professorReviewCount`, `professorProfilePhoto`, `subjectLabel`, `levelLabel` (helper `firstName(List, fn)`).
-- `BookingResource` : `GET /bookings/{id}` (requireAuth), `PUT /bookings/{id}/meeting` (PROFESSOR, `@Valid`), `DELETE /bookings/{id}/meeting` (PROFESSOR).
-- `mvn clean package` (WAR régénéré) + `docker cp` + `jboss-cli deploy --force` (pas de boucle de redéploiement, dossier `wildfly/deployments/` toujours VIDE).
+## 4. Tests admin (vérifiés en réel)
+1. Login `weborax.dev@gmail.com` → 200, rôle ADMIN, session créée.
+2. `/admin/stats`, `/admin/users`, `/admin/bookings`, `/admin/professors` (token admin) → 200.
+3. `/admin/stats` sans token → **401**.
+4. `/admin/stats` token étudiant (`omar.student@gmail.com`) → **403**.
+5. Logout → 200 + token ensuite refusé (401).
+6. Refresh de page : session conservée (token+user en localStorage `cc_token`/`cc_user`, réutilisé par `AuthContext`) — comportement existant inchangé.
+7. Login email non normalisé → 200 (normalisé backend).
 
-### Frontend (build OK : JS 323.30 kB / CSS 75.14 kB)
-- `types/index.ts` : `Offer` sans link/instructions ; `Booking` + `professorRating/professorReviewCount/professorProfilePhoto/subjectLabel/levelLabel` ; `MeetingConfigData`.
-- `api.ts` : `getBooking(id)`, `saveMeetingConfig(id, dto)`, `deleteMeetingConfig(id)` ; `acceptBooking` → `{ meetingLocation? }`.
-- `labels.ts` : `isSafeMeetingUrl` **https-only**, `MEETING_LINK_HELP` à jour, `ONLINE_ACCEPT_HINT`.
-- **Dashboard prof** : offre « en ligne » = plateforme préférée + aide « le lien est ajouté à la réservation après acceptation » ; liste offres avec « · lien ajouté à la réservation après acceptation » ; modal d'acceptation simple (rappel) ; **zone « Cours en ligne » par réservation** (badge « Lien ajouté » / « Lien à ajouter », boutons Ajouter/Modifier/Supprimer, éditeur inline plateforme/lien/instructions, retour d'erreur 400 visible, rechargement) ; Vue d'ensemble avec compteur « X confirmé(s) · Y lien(s) ajouté(s) · Z à ajouter » + CTA « Gérer les liens ».
-- **Dashboard élève routé** :
-  - `components/dashboard/StudentShell.tsx` (nav : Tableau de bord, Rechercher un professeur, Mes Réservations, Favoris, Notifications, Mon Profil, Déconnexion ; badge count « en attente »).
-  - `/student` (`Home`) : hero « Bonjour … », stats (réservations/à venir/en attente/favoris), **Prochains cours** (≤3 acceptés futurs, carte avec photo·note·date·plateforme + CTA « Voir la réservation »/« Rejoindre le cours »), Dernières réservations (photo/matière/niveau/montant), CTA « Rechercher un professeur ».
-  - `/student/reservations` (`StudentBookings`) : onglets segmentés (sémantique décidée), carte enrichie (photo prof, note + nb avis, sujet, niveau, date/heure/durée, paiement, chip « Cours en ligne · Plateforme », **bloc séance** « Prêt »/« Lien à venir » avec « Rejoindre la séance », lieu privé après confirmation), actions Voir les détails / Annuler / Laisser un avis, badge « Avis publié ».
-  - `/student/reservations/:id` (`BookingDetail`) : sections Professeur / Cours réservé / Paiement / Statut (messages contextuels PENDING, ACCEPTED, REJECTED motif, CANCELLED, COMPLETED) / Cours en ligne (Rejoindre + instructions, ou « sera ajouté prochainement ») / Lieu ; actions retour/annuler/avis.
-  - `/student/profile` (`Profile`) : info + édition téléphone/ville (Select) héritées de l'ancien onglet.
-  - `/student/notifications` (`Notifications`) : liste (icône par type, non-lues en surbrillance, date FR) + « Tout marquer comme lu ».
-  - `App.tsx` routes ajoutées (Protecté STUDENT) ; ancien `pages/student/Dashboard.tsx` supprimé ; lien succès `FicheProf` → `/student/reservations`.
+## 5. Frontend — build
+- `npm run build` OK (Vite 5.4.21, **83 modules**, JS 348.73 kB / CSS 76.16 kB, gzip 95.98 / 13.59 kB) ; `tsc --noEmit` propre (ajout de `src/vite-env.d.ts` = types `vite/client` pour `import.meta.env`).
+- Dev server Vite (5173) toujours OK : login + `/admin/stats` via proxy → 200.
 
-## Sécurité (vérifiée E2E réel)
-- `GET /professors/1` : offre 3 = `platform: Zoom`, **clés `link`/`instructions` totalement absentes** (0 clé) ; aucun `meetingLink` dans les listes d'offres.
-- Liens de séance : `http://` et `javascript:` → **400** ; protocoles non-https impossibles (validateur strict côté serveur) ; `safeMeetingUrl` UI = https uniquement.
-- `PUT/DELETE /bookings/{id}/meeting` : 401 sans token, **403 étudiant** ; non propriétaire → inaccessible.
-- Étudiant PENDING ne voit jamais de lien ; ACCEPTED/COMPLETED → lien + instructions ; REJECTED/CANCELLED → aucune info de séance.
-- Notification « Lien de votre cours en ligne » générée côté serveur sur ajout/mise à jour (pas de message falsifiable par le client).
+## 6. Frontend — Vercel
+- **Root Directory** : `frontend` ; **Build Command** : `npm run build` ; **Output Directory** : `dist` (lockfile `package-lock.json` conservé → `npm ci`/`npm install` conforme).
+- `frontend/vercel.json` : rewrite SPA `/((?!api/|assets/|vite.svg).*)` → `/index.html` → les routes directes (`/recherche`, `/professeur/123`, `/student/reservations/:id`, `/professor/*`, `/admin`) ne retournent plus de 404 Vercel. **Pas de rewrite `/api`** : l'URL du backend production n'est pas inventée.
+- Le frontend n'appelle **jamais** `localhost` en prod : `api.ts` utilise **`VITE_API_URL`** (fallback `'/api'` pour le dev/proxy), et le logout `AuthContext` passe aussi par `getApiBase()`.
 
-## Tests
-- Backend : **23/23 PASS** (`mvn test`) — 9 `PasswordUtilTest` + 8 `PhotoValidatorTest` + 6 `UrlValidatorTest` (dont https strict). `BUILD SUCCESS`.
-- Frontend : `tsc --noEmit` propre ; `npm run build` OK (JS 323.30 kB / CSS 75.14 kB).
-- E2E backend (curl via proxy Vite) : booking ONLINE → PENDING (aucun lien) → PUT meeting étudiant 403 → 409 si PENDING → accept `{}` → lien http:// 400 → javascript: 400 → https OK → étudiant voit → DELETE OK (platform conservée) → notification créée ; accents propres ; offre 3 réparée (« Zoom » + accents).
-- E2E headless (Edge `check-dash.js`) : **102/102 PASS** — accueil (hero/stats/prochains cours/3 dernières), onglets (labels exacts, Toutes (11), Annulées = CANCELLED+REJECTED, `?filter=`), détail 27 (6 sections, badge « Lien à venir », montant), profil (email, Modifier), notifications (liste, non-lues), **compteur prof « Cours en ligne confirmés »**, éditeur lien (préfill plateforme « Zoom », save → badge « Lien ajouté » + href), étudiant voit « Prêt » + « Rejoindre » + instructions après ajout, restore DELETE effectif ; **overflow 0 px @ 1440 / 1280 / 1024 / 768 / 430 / 390 / 360** sur Home, Mes Réservations, Détail, Profil, Notifications (aucun JS error). Captures : `%TEMP%\opencode\shots\st-*.png`, `prof-meeting-added.png`.
+## 7. Environment variables
+| Variable | Côté | Public ? | Usage |
+|---|---|---|---|
+| `VITE_API_URL` | Frontend (Vercel) | OUI (exposée navigateur) | URL HTTPS du backend API (ex. `https://api.mondomaine.ma/api`) |
+| `ADMIN_EMAIL` | Backend (WildFly) | NON | Email de l'admin provisionné par `AdminBootstrap` |
+| `ADMIN_PASSWORD` | Backend (WildFly) | NON | Mot de passe admin (jamais en dur, jamais en `VITE_*`) |
+| `CORS_ALLOWED_ORIGINS` | Backend (WildFly) | NON | Liste virgulée des origines autorisées (jamais `*` avec credentials) |
 
-## Régressions surveillées (leçon)
-- **Mojibake via `curl.exe`/PowerShell** : toute édition de données via un pipeline PowerShell+curl ré-encode en cp1252 les accents → j'ai temporairement corrompu `offers.title/description` (offre 3) en le restaurant ; **réparé via Node `fetch` (UTF-8 propre)** — ne jamais écrire de texte accentué depuis PS en passant par un `$obj` décodé de `curl.exe`, toujours Préférer Node/`--data-binary @fichier`.
+- Secrets (DATABASE_URL, JWT/SESSION secret, SMTP, etc.) : **restent côté backend**, absents de `VITE_*` et de Git.
+- `.env.example` créés : `frontend/.env.example` (VITE_API_URL) + racine `.env.example` (ADMIN_EMAIL/ADMIN_PASSWORD/CORS_ALLOWED_ORIGINS). `.gitignore` : `.env.*` ignoré, `!.env.example` conservé (vérifié : `.env` ignoré, `.env.example` traçable).
 
-## Points restants
-- **Paiement en ligne** toujours désactivé (CASH only, 409 « Paiement en ligne — bientôt disponible »).
-- **Anciennes données** : les offres existantes n'ont pas toutes de plateforme renseignée ; l'éditeur pré-remplit depuis la plateforme de l'offre sinon reste vide (le professeur choisit).
-- **Page de réunion réelle** : le « Rejoindre la séance » ouvre le lien externe du professeur (pas de salle intégrée CoursConnect).
-- **Données de test** : booking 27 reste ACCEPTED en ligne sans lien (état « Lien à venir » attendu) ; les liens ajoutés par le scénario de test sont supprimés (booking 10 restauré).
-- Vérification visuelle utilisateur aux breakpoints (captures headless dispo `%TEMP%\opencode\shots\st-*.png`, `prof-meeting-added.png`).
+## 8. Backend
+- **URL API actuelle** (dev) : `http://localhost:8081/coursconnect-api/api` (WildFly 8081, contexte `/coursconnect-api`).
+- **CORS** : nouveau `CorsConfig.resolveOrigin` — `CORS_ALLOWED_ORIGINS` multi-origines (liste virgulée), origine écho uniquement si autorisée ; `Access-Control-Allow-Credentials: true` ; méthodes/headers (Authorization, Content-Type) gérés ; OPTIONS → 204.
+- **État du déploiement backend production : NON CONFIGURÉ** — c'est un service séparé (Java 21 / Jakarta EE 10 / WildFly / MySQL) qui doit avoir sa propre infrastructure de production. **Aucune URL production n'a été inventée.**
+
+## 9. Déploiement
+- **Frontend Vercel : PRÊT (non déployé)** — la préparation (vercel.json, VITE_API_URL, build) est terminée et vérifiée localement. Pour déployer réellement, il faut :
+  1. **Token Vercel** (ou `vercel login`) — la CLI `vercel` n'est pas installée et `VERCEL_TOKEN` n'est pas défini sur la machine ;
+  2. **URL HTTPS réelle du backend Java/Jakarta EE de production** → à mettre dans `VITE_API_URL` (Vercel → Settings → Environment Variables) et dans `CORS_ALLOWED_ORIGINS` du backend.
+- Étapes : `cd frontend` → `vercel link` (ou import du dépôt GitHub, Root Directory `frontend`) → définir `VITE_API_URL` → `vercel deploy --prod`.
+- Après déploiement, à tester depuis le vrai domaine : login admin/student/professor, routes directes SPA (pas de 404), aucun appel `localhost` dans le Network, CORS OK.
+
+## 10. Fichiers modifiés / créés
+- Backend : `config/CorsConfig.java` (créé), `config/CorsFilter.java`, `config/AuthFilter.java`, `service/AdminBootstrap.java` (créé), `service/AuthService.java`, `dto/{LoginDTO,RegisterStudentDTO,RegisterProfessorDTO}.java`, `repository/UserRepository.java` (fix logout).
+- Infra : `docker-compose.yml` (env ADMIN_EMAIL/ADMIN_PASSWORD/CORS_ALLOWED_ORIGINS), `sql/seed-data.sql` (admin par défaut retiré), `.env` (local, gitignoré), `.env.example` (créé).
+- Frontend : `services/api.ts` (VITE_API_URL + `getApiBase`), `contexts/AuthContext.tsx` (logout via base), `src/vite-env.d.ts` (créé), `vercel.json` (créé), `frontend/.env.example` (créé), `.gitignore`.
+
+## 11. Points restants (infos utilisateur requises)
+- **URL réelle du backend de production** (HTTPS) — pour `VITE_API_URL` et `CORS_ALLOWED_ORIGINS`.
+- **Connexion/token Vercel** — pour lancer le déploiement réel.
+- Backend production (WildFly/MySQL) : infrastructure à provisionner séparément (non couverte ici).
+- Vérification visuelle navigateur (breakpoints) de la précédente tâche dashboard, toujours en attente.

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User, AuthResponse } from '../types';
+import { getApiBase } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('cc_token');
     localStorage.removeItem('cc_user');
     if (currentToken) {
-      fetch('/api/auth/logout', {
+      fetch(`${getApiBase()}/auth/logout`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${currentToken}` },
       }).catch(() => {});

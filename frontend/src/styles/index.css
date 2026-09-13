@@ -4336,6 +4336,7 @@ textarea.form-input {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.92rem;
@@ -4564,6 +4565,69 @@ textarea.form-input {
   gap: 0.6rem;
 }
 
+/* Todo (À faire) */
+.todo-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--success-700);
+  font-size: 0.95rem;
+  padding: 0.75rem 0.25rem;
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.35rem;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-item__icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--primary-100);
+  color: var(--primary-700);
+  display: grid;
+  place-items: center;
+}
+
+.todo-item__body {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.todo-item__title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 560px) {
+  .todo-item {
+    align-items: flex-start;
+  }
+  .todo-item .btn {
+    width: 100%;
+  }
+}
+
 /* Notifications */
 .notif-list {
   display: flex;
@@ -4620,6 +4684,27 @@ textarea.form-input {
 .notif-item__date {
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.notif-item__link {
+  display: contents;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+.notif-item__link .notif-item__icon {
+  pointer-events: none;
+}
+
+.notif-item__cta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-700);
 }
 
 @media (max-width: 520px) {
