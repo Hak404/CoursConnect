@@ -6,6 +6,7 @@ import com.coursconnect.service.NotificationService;
 import jakarta.ejb.EJB;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -41,5 +42,16 @@ public class NotificationResource {
         User user = ProfessorResource.requireAuth(currentUser);
         notificationService.markAllRead(user.getId());
         return Response.ok("{\"message\": \"Notifications marquées comme lues\"}").build();
+    }
+
+    @PUT
+    @Path("/{id}/read")
+    public Response markRead(@PathParam("id") @NotNull Long id) {
+        User user = ProfessorResource.requireAuth(currentUser);
+        boolean marked = notificationService.markRead(user.getId(), id);
+        if (!marked) {
+            throw new com.coursconnect.exception.NotFoundException("Notification non trouvée");
+        }
+        return Response.ok("{\"message\": \"Notification marquée comme lue\"}").build();
     }
 }

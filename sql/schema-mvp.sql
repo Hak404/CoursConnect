@@ -166,6 +166,9 @@ CREATE TABLE IF NOT EXISTS offers (
     duration_minutes INT NOT NULL,
     course_type ENUM('INDIVIDUAL', 'GROUP', 'ONLINE') NOT NULL,
     location_type ENUM('STUDENT_HOME', 'PROFESSOR_HOME', 'ONLINE', 'OTHER') NOT NULL,
+    meeting_platform VARCHAR(50) NULL,
+    meeting_link VARCHAR(500) NULL,
+    meeting_instructions TEXT NULL,
     active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -201,6 +204,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     paid_at DATETIME NULL,
     meeting_location VARCHAR(500) NULL,
     meeting_link VARCHAR(500) NULL,
+    meeting_platform VARCHAR(50) NULL,
+    meeting_instructions TEXT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
@@ -221,12 +226,22 @@ CREATE TABLE IF NOT EXISTS reviews (
     FOREIGN KEY (professor_id) REFERENCES professors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS professor_favorites (
+    student_id BIGINT NOT NULL,
+    professor_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, professor_id),
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (professor_id) REFERENCES professors(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     message TEXT NOT NULL,
     type VARCHAR(50),
+    reference_id BIGINT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

@@ -1,5 +1,5 @@
 import type {
-  City, Subject, Level, Offer, Availability, Booking, BookingCreateData, Review, PriceProposal, PriceProposalCreateData,
+  City, Subject, Level, Offer, Availability, Booking, BookingCreateData, MeetingConfigData, Review, PriceProposal, PriceProposalCreateData,
   ProfessorCard, ProfessorDetail, SearchCriteria, PagedResult, HomePage,
   AuthResponse, LoginData, RegisterStudentData, RegisterProfessorData, User,
   StudentProfile, ProfessorProfile, UpdateProfessorData, UpdateStudentData,
@@ -8,24 +8,55 @@ import type {
 
 const API_BASE = '/api';
 
-async function parseError(text: string): Promise<string> {
+const NETWORK_ERROR_MESSAGE = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
+const SERVICE_UNAVAILABLE_MESSAGE = 'Le service est temporairement indisponible. Veuillez réessayer.';
+const INVALID_RESPONSE_MESSAGE = 'Le serveur a renvoyé une réponse invalide. Veuillez réessayer.';
+
+function buildErrorMessage(text: string, status: number): string {
+  if (text && text.trim()) {
+    const trimmed = text.trim();
+    try {
+      const json = JSON.parse(trimmed);
+      if (json && typeof json === 'object') {
+        const parts: string[] = [];
+        if (typeof json.error === 'string' && json.error) parts.push(json.error);
+        if (typeof json.details === 'string' && json.details) parts.push(json.details);
+        if (typeof json.message === 'string' && json.message) parts.push(json.message);
+        if (parts.length > 0) return parts.join(' — ').slice(0, 300);
+      }
+    } catch {
+      /* body is not JSON */
+    }
+    if (trimmed.startsWith('<')) return SERVICE_UNAVAILABLE_MESSAGE;
+    if (/error occurred while trying to proxy|502 bad gateway|503 service unavailable|504 gateway/i.test(trimmed)) {
+      return NETWORK_ERROR_MESSAGE;
+    }
+  }
+  if (status) return `Le serveur a retourné une erreur (${status}).`;
+  return 'Une erreur inattendue est survenue. Veuillez réessayer.';
+}
+
+async function rawFetch(url: string, options: RequestInit): Promise<Response> {
   try {
-    const json = JSON.parse(text);
-    if (json.details) return `${json.error} — ${json.details}`;
-    return json.error || `Erreur ${text}`;
+    return await fetch(url, options);
   } catch {
-    if (text.trim().startsWith('<')) return 'Le service est temporairement indisponible. Veuillez réessayer.';
-    return text || 'Erreur inconnue';
+    throw new Error(NETWORK_ERROR_MESSAGE);
   }
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    throw new Error(await parseError(text));
+    throw new Error(buildErrorMessage(text, response.status));
   }
   if (response.status === 204) return undefined as T;
-  return response.json();
+  const text = await response.text().catch(() => '');
+  if (!text) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(INVALID_RESPONSE_MESSAGE);
+  }
 }
 
 function getToken(): string | null {
@@ -37,13 +68,13 @@ function headers(extra?: Record<string, string>): Record<string, string> {
 }
 
 async function publicFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${url}`, { ...options, headers: headers(options.headers as Record<string, string>) });
+  const response = await rawFetch(`${API_BASE}${url}`, { ...options, headers: headers(options.headers as Record<string, string>) });
   return handleResponse<T>(response);
 }
 
 async function authFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(`${API_BASE}${url}`, {
+  const response = await rawFetch(`${API_BASE}${url}`, {
     ...options,
     headers: { ...headers(options.headers as Record<string, string>), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
@@ -85,6 +116,7 @@ export function searchProfessors(criteria: SearchCriteria): Promise<PagedResult<
   });
   if (criteria.cityId !== undefined && criteria.cityId !== null) params.set('cityId', String(criteria.cityId));
   if (criteria.city) params.set('city', criteria.city);
+  if (criteria.search) params.set('search', criteria.search);
   if (criteria.subjectId !== undefined && criteria.subjectId !== null) params.set('subjectId', String(criteria.subjectId));
   if (criteria.levelId !== undefined && criteria.levelId !== null) params.set('levelId', String(criteria.levelId));
   if (criteria.minPrice !== undefined && criteria.minPrice !== null) params.set('minPrice', String(criteria.minPrice));
@@ -156,6 +188,24 @@ export function reviewExistsForBooking(bookingId: number): Promise<{ exists: boo
   return authFetch<{ exists: boolean }>(`/reviews/bookings/${bookingId}/exists`);
 }
 
+/* ------------------------------- FAVORITES ------------------------------- */
+
+export function getMyFavoriteProfessors(): Promise<ProfessorCard[]> {
+  return authFetch<ProfessorCard[]>('/students/me/favorites');
+}
+
+export function getMyFavoriteIds(): Promise<number[]> {
+  return authFetch<number[]>('/students/me/favorites/ids');
+}
+
+export function addFavorite(professorId: number): Promise<void> {
+  return authFetch<void>(`/students/me/favorites/${professorId}`, { method: 'POST' });
+}
+
+export function removeFavorite(professorId: number): Promise<void> {
+  return authFetch<void>(`/students/me/favorites/${professorId}`, { method: 'DELETE' });
+}
+
 /* ------------------------------- PRICE PROPOSALS ------------------------------- */
 
 export function createPriceProposal(data: PriceProposalCreateData): Promise<PriceProposal> {
@@ -192,6 +242,19 @@ export function updateMyProfessorProfile(data: UpdateProfessorData): Promise<Pro
   return authFetch<ProfessorProfile>('/professors/me', { method: 'PUT', body: JSON.stringify(data) });
 }
 
+export function uploadProfessorPhoto(file: File): Promise<ProfessorProfile> {
+  const token = getToken();
+  return rawFetch(`${API_BASE}/uploads/profiles/me`, {
+    method: 'PUT',
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: file,
+  }).then((r) => handleResponse<ProfessorProfile>(r));
+}
+
+export function deleteProfessorPhoto(): Promise<ProfessorProfile> {
+  return authFetch<ProfessorProfile>('/uploads/profiles/me', { method: 'DELETE' });
+}
+
 export function getMyOffers(): Promise<Offer[]> {
   return authFetch<Offer[]>('/professors/me/offers');
 }
@@ -224,8 +287,23 @@ export function getMyProfessorBookings(): Promise<Booking[]> {
   return authFetch<Booking[]>('/professors/me/bookings');
 }
 
-export function acceptBooking(id: number, dto: { meetingLink?: string; meetingLocation?: string } = {}): Promise<Booking> {
+export function acceptBooking(
+  id: number,
+  dto: { meetingLocation?: string } = {}
+): Promise<Booking> {
   return authFetch<Booking>(`/bookings/${id}/accept`, { method: 'PUT', body: JSON.stringify(dto) });
+}
+
+export function getBooking(id: number): Promise<Booking> {
+  return authFetch<Booking>(`/bookings/${id}`);
+}
+
+export function saveMeetingConfig(id: number, dto: MeetingConfigData): Promise<Booking> {
+  return authFetch<Booking>(`/bookings/${id}/meeting`, { method: 'PUT', body: JSON.stringify(dto) });
+}
+
+export function deleteMeetingConfig(id: number): Promise<Booking> {
+  return authFetch<Booking>(`/bookings/${id}/meeting`, { method: 'DELETE' });
 }
 
 export function markBookingPaid(id: number): Promise<Booking> {
@@ -243,6 +321,10 @@ export function completeBooking(id: number): Promise<Booking> {
   return authFetch<Booking>(`/bookings/${id}/complete`, { method: 'PUT' });
 }
 
+export function cancelBookingAsProfessor(id: number): Promise<Booking> {
+  return authFetch<Booking>(`/bookings/${id}/professor-cancel`, { method: 'PUT' });
+}
+
 export function getMyReviews(): Promise<Review[]> {
   return authFetch<Review[]>('/reviews/me');
 }
@@ -255,6 +337,14 @@ export function getNotifications(): Promise<NotificationItem[]> {
 
 export function markAllRead(): Promise<void> {
   return authFetch<void>('/notifications/read-all', { method: 'PUT' });
+}
+
+export function getNotificationUnreadCount(): Promise<number> {
+  return authFetch<{ count: number }>('/notifications/unread-count').then((r) => r.count);
+}
+
+export function markNotificationRead(id: number): Promise<void> {
+  return authFetch<void>(`/notifications/${id}/read`, { method: 'PUT' });
 }
 
 /* ------------------------------- ADMIN ------------------------------- */

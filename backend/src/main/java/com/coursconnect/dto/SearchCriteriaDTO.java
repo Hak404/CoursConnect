@@ -6,6 +6,7 @@ public class SearchCriteriaDTO {
 
     private Long cityId;
     private String cityName;
+    private String search;
     private Long subjectId;
     private Long levelId;
     private BigDecimal minPrice;
@@ -23,6 +24,8 @@ public class SearchCriteriaDTO {
     public void setCityId(Long cityId) { this.cityId = cityId; }
     public String getCityName() { return cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
+    public String getSearch() { return search; }
+    public void setSearch(String search) { this.search = search; }
     public Long getSubjectId() { return subjectId; }
     public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
     public Long getLevelId() { return levelId; }

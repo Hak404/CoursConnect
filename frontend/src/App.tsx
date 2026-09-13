@@ -9,9 +9,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import RegisterStudent from './pages/RegisterStudent';
 import RegisterProfessor from './pages/RegisterProfessor';
-import StudentDashboard from './pages/student/Dashboard';
+import StudentHome from './pages/student/Home';
+import StudentBookings from './pages/student/StudentBookings';
+import BookingDetail from './pages/student/BookingDetail';
+import StudentProfilePage from './pages/student/Profile';
+import Notifications from './pages/student/Notifications';
 import ProfessorDashboard from './pages/professor/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
+import Favoris from './pages/Favoris';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const DASH_PREFIXES = ['/student', '/professor', '/admin'];
@@ -37,9 +42,14 @@ function AppChrome() {
           <Route path="/register/professor" element={<RegisterProfessor />} />
 
           {/* Protected dashboards */}
-          <Route path="/student" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/student" element={<ProtectedRoute roles={['STUDENT']}><StudentHome /></ProtectedRoute>} />
+          <Route path="/student/reservations" element={<ProtectedRoute roles={['STUDENT']}><StudentBookings /></ProtectedRoute>} />
+          <Route path="/student/reservations/:id" element={<ProtectedRoute roles={['STUDENT']}><BookingDetail /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute roles={['STUDENT']}><StudentProfilePage /></ProtectedRoute>} />
+          <Route path="/student/notifications" element={<ProtectedRoute roles={['STUDENT']}><Notifications /></ProtectedRoute>} />
           <Route path="/professor" element={<ProtectedRoute roles={['PROFESSOR']}><ProfessorDashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/favoris" element={<ProtectedRoute roles={['STUDENT']}><Favoris /></ProtectedRoute>} />
         </Routes>
       </main>
       {!isDash && <Footer />}

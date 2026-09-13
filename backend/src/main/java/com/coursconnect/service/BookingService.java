@@ -3,6 +3,8 @@ package com.coursconnect.service;
 import com.coursconnect.dto.BookingAcceptDTO;
 import com.coursconnect.dto.BookingCreateDTO;
 import com.coursconnect.dto.BookingResponseDTO;
+import com.coursconnect.dto.MeetingConfigDTO;
+import com.coursconnect.exception.BadRequestException;
 import com.coursconnect.exception.ConflictException;
 import com.coursconnect.exception.NotFoundException;
 import com.coursconnect.model.*;
@@ -16,13 +18,17 @@ import com.coursconnect.repository.AvailabilityRepository;
 import com.coursconnect.repository.BookingRepository;
 import com.coursconnect.repository.PriceProposalRepository;
 import com.coursconnect.repository.ReviewRepository;
+import com.coursconnect.util.UrlValidator;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Stateless
@@ -163,7 +169,7 @@ public class BookingService {
                 "Nouvelle demande de réservation",
                 student.getUser().getFirstName() + " " + student.getUser().getLastName()
                         + " a réservé votre offre : " + offer.getTitle(),
-                "BOOKING");
+                "BOOKING", booking.getId());
 
         return toDTO(booking);
     }
@@ -188,9 +194,6 @@ public class BookingService {
             throw new ConflictException("Seules les réservations en attente peuvent être acceptées");
         }
         LocationType locationType = booking.getOffer().getLocationType();
-        if (locationType == LocationType.ONLINE && dto != null && !isBlank(dto.getMeetingLink())) {
-            booking.setMeetingLink(dto.getMeetingLink().trim());
-        }
         if (locationType == LocationType.PROFESSOR_HOME) {
             if (dto != null && !isBlank(dto.getMeetingLocation())) {
                 booking.setMeetingLocation(dto.getMeetingLocation().trim());
@@ -198,14 +201,92 @@ public class BookingService {
                 booking.setMeetingLocation(professor.getTeachingAddress());
             }
         }
+        // Online bookings are accepted without a meeting link: the professor
+        // attaches it afterwards through PUT /bookings/{id}/meeting.
         booking.setStatus(BookingStatus.ACCEPTED);
         booking = bookingRepository.save(booking);
 
         notificationService.notify(booking.getStudent().getUser().getId(),
                 "Réservation acceptée",
                 "Votre réservation pour '" + booking.getOffer().getTitle() + "' a été acceptée.",
-                "BOOKING");
+                "BOOKING", booking.getId());
 
+        return toDTO(booking);
+    }
+
+    /**
+     * Attaches or updates the meeting link of an online booking. Only the owning
+     * professor may do it, and only once the booking is accepted (or completed).
+     * The link must be a valid https URL; platform/instructions are optional.
+     */
+    public BookingResponseDTO saveMeetingConfig(Long professorUserId, Long bookingId, MeetingConfigDTO dto) {
+        Professor professor = professorService.findProfessorByUserId(professorUserId);
+        Booking booking = getOwnedBooking(professor, bookingId);
+        if (booking.getOffer().getLocationType() != LocationType.ONLINE) {
+            throw new ConflictException("Cette réservation n'est pas un cours en ligne");
+        }
+        if (booking.getStatus() != BookingStatus.ACCEPTED
+                && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new ConflictException("Le lien peut être ajouté une fois la réservation acceptée");
+        }
+
+        String link = dto != null ? UrlValidator.normalizedOrNull(dto.getMeetingLink()) : null;
+        if (link != null && !UrlValidator.isHttpsUrl(link)) {
+            throw new BadRequestException(
+                    "Le lien de la réunion doit être une URL https valide (ex : https://zoom.us/j/...)");
+        }
+        booking.setMeetingLink(link);
+        if (dto != null && dto.getMeetingPlatform() != null) {
+            booking.setMeetingPlatform(UrlValidator.normalizedOrNull(dto.getMeetingPlatform()));
+        }
+        if (dto != null && dto.getMeetingInstructions() != null) {
+            booking.setMeetingInstructions(UrlValidator.normalizedOrNull(dto.getMeetingInstructions()));
+        }
+        booking = bookingRepository.save(booking);
+
+        notificationService.notify(booking.getStudent().getUser().getId(),
+                isBlank(link) ? "Cours en ligne mis à jour"
+                        : "Lien de votre cours en ligne",
+                isBlank(link)
+                        ? "Le professeur a mis à jour les informations de votre cours en ligne '" + booking.getOffer().getTitle() + "'."
+                        : "Le professeur a ajouté le lien de votre cours en ligne '" + booking.getOffer().getTitle() + "'. Rendez-vous à la date prévue pour rejoindre la séance.",
+                "BOOKING", booking.getId());
+
+        return toDTO(booking);
+    }
+
+    /**
+     * Removes the meeting link (and its instructions) from an online booking.
+     */
+    public BookingResponseDTO deleteMeetingConfig(Long professorUserId, Long bookingId) {
+        Professor professor = professorService.findProfessorByUserId(professorUserId);
+        Booking booking = getOwnedBooking(professor, bookingId);
+        if (booking.getOffer().getLocationType() != LocationType.ONLINE) {
+            throw new ConflictException("Cette réservation n'est pas un cours en ligne");
+        }
+        if (booking.getStatus() != BookingStatus.ACCEPTED
+                && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new ConflictException("Le lien ne peut être supprimé qu'après acceptation");
+        }
+        booking.setMeetingLink(null);
+        booking.setMeetingInstructions(null);
+        booking = bookingRepository.save(booking);
+        return toDTO(booking);
+    }
+
+    /**
+     * Returns a booking to one of its participants (student or owning professor).
+     */
+    public BookingResponseDTO getParticipantBooking(Long userId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId);
+        if (booking == null) {
+            throw new NotFoundException("Réservation non trouvée");
+        }
+        boolean isStudent = booking.getStudent().getUser().getId().equals(userId);
+        boolean isProfessor = booking.getProfessor().getUser().getId().equals(userId);
+        if (!isStudent && !isProfessor) {
+            throw new NotFoundException("Réservation non trouvée");
+        }
         return toDTO(booking);
     }
 
@@ -222,7 +303,7 @@ public class BookingService {
         notificationService.notify(booking.getStudent().getUser().getId(),
                 "Réservation refusée",
                 "Votre réservation pour '" + booking.getOffer().getTitle() + "' a été refusée.",
-                "BOOKING");
+                "BOOKING", booking.getId());
 
         return toDTO(booking);
     }
@@ -233,18 +314,52 @@ public class BookingService {
         if (booking == null || !booking.getStudent().getId().equals(student.getId())) {
             throw new NotFoundException("Réservation non trouvée");
         }
-        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.ACCEPTED) {
-            throw new ConflictException("Cette réservation ne peut plus être annulée");
-        }
+        checkCancellable(booking);
         booking.setStatus(BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
 
         notificationService.notify(booking.getProfessor().getUser().getId(),
                 "Réservation annulée",
-                student.getUser().getFirstName() + " a annulé la réservation pour '" + booking.getOffer().getTitle() + "'.",
-                "BOOKING");
+                student.getUser().getFirstName() + " " + student.getUser().getLastName()
+                        + " a annulé sa réservation de " + booking.getOffer().getTitle()
+                        + " prévue le " + formatDateTimeFR(booking.getScheduledAt()) + ".",
+                "BOOKING_CANCELLED", booking.getId());
 
         return toDTO(booking);
+    }
+
+    /**
+     * A professor may cancel his own pending or accepted reservation. The student
+     * is notified once; cancelling an already-cancelled booking is rejected so no
+     * duplicate notification can ever be created.
+     */
+    public BookingResponseDTO cancelByProfessor(Long professorUserId, Long bookingId) {
+        Professor professor = professorService.findProfessorByUserId(professorUserId);
+        Booking booking = getOwnedBooking(professor, bookingId);
+        checkCancellable(booking);
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking = bookingRepository.save(booking);
+
+        notificationService.notify(booking.getStudent().getUser().getId(),
+                "Réservation annulée par le professeur",
+                "Le professeur " + booking.getProfessor().getUser().getFirstName()
+                        + " " + booking.getProfessor().getUser().getLastName()
+                        + " a annulé votre cours de " + booking.getOffer().getTitle()
+                        + " prévu le " + formatDateTimeFR(booking.getScheduledAt()) + ".",
+                "BOOKING_CANCELLED", booking.getId());
+
+        return toDTO(booking);
+    }
+
+    private void checkCancellable(Booking booking) {
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.ACCEPTED) {
+            throw new ConflictException("Cette réservation ne peut plus être annulée");
+        }
+    }
+
+    private String formatDateTimeFR(LocalDateTime dateTime) {
+        if (dateTime == null) return "";
+        return DateTimeFormatter.ofPattern("d MMMM yyyy 'à' HH:mm", Locale.FRENCH).format(dateTime);
     }
 
     public BookingResponseDTO complete(Long professorUserId, Long bookingId) {
@@ -259,7 +374,7 @@ public class BookingService {
         notificationService.notify(booking.getStudent().getUser().getId(),
                 "Cours terminé",
                 "Le cours '" + booking.getOffer().getTitle() + "' est terminé. Vous pouvez laisser un avis.",
-                "REVIEW");
+                "REVIEW", booking.getId());
 
         return toDTO(booking);
     }
@@ -300,6 +415,7 @@ public class BookingService {
         dto.setStudentId(booking.getStudent().getId());
         dto.setStudentName(booking.getStudent().getUser().getFirstName()
                 + " " + booking.getStudent().getUser().getLastName());
+        dto.setStudentProfilePhoto(booking.getStudent().getProfilePhoto());
         dto.setProfessorId(booking.getProfessor().getId());
         dto.setProfessorName(booking.getProfessor().getUser().getFirstName()
                 + " " + booking.getProfessor().getUser().getLastName());
@@ -309,6 +425,13 @@ public class BookingService {
         dto.setLocationType(booking.getOffer().getLocationType().name());
         dto.setScheduledAt(booking.getScheduledAt());
         dto.setStatus(booking.getStatus());
+        dto.setProfessorRating(booking.getProfessor().getAverageRating());
+        dto.setProfessorReviewCount(booking.getProfessor().getTotalReviews());
+        dto.setProfessorProfilePhoto(booking.getProfessor().getProfilePhoto());
+        dto.setSubjectLabel(firstName(booking.getProfessor().getSubjects(),
+                Subject::getName));
+        dto.setLevelLabel(firstName(booking.getProfessor().getLevels(),
+                Level::getName));
         dto.setNegotiatedPrice(booking.getNegotiatedPrice());
         dto.setPaymentMethod(booking.getPaymentMethod() != null ? booking.getPaymentMethod() : PaymentMethod.CASH);
         dto.setPaymentStatus(booking.getPaymentStatus() != null ? booking.getPaymentStatus() : PaymentStatus.UNPAID);
@@ -317,6 +440,8 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.ACCEPTED || booking.getStatus() == BookingStatus.COMPLETED) {
             dto.setMeetingLocation(booking.getMeetingLocation());
             dto.setMeetingLink(booking.getMeetingLink());
+            dto.setMeetingPlatform(booking.getMeetingPlatform());
+            dto.setMeetingInstructions(booking.getMeetingInstructions());
         }
         dto.setPaymentReference(booking.getPaymentReference());
         dto.setPaidAt(booking.getPaidAt());
@@ -347,5 +472,11 @@ public class BookingService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private <T> String firstName(List<T> items, Function<T, String> name) {
+        if (items == null || items.isEmpty()) return null;
+        String label = items.get(0) != null ? name.apply(items.get(0)) : null;
+        return isBlank(label) ? null : label;
     }
 }

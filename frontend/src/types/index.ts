@@ -39,6 +39,7 @@ export interface Offer {
   durationMinutes: number;
   courseType: CourseType;
   locationType: LocationType;
+  meetingPlatform?: string | null;
   active: boolean;
   createdAt?: string;
 }
@@ -67,6 +68,7 @@ export interface Booking {
   id: number;
   studentId: number;
   studentName: string;
+  studentProfilePhoto?: string | null;
   professorId: number;
   professorName: string;
   offerId: number;
@@ -75,6 +77,11 @@ export interface Booking {
   locationType?: string | null;
   scheduledAt: string;
   status: BookingStatus;
+  professorRating?: number | null;
+  professorReviewCount?: number | null;
+  professorProfilePhoto?: string | null;
+  subjectLabel?: string | null;
+  levelLabel?: string | null;
   negotiatedPrice?: number | null;
   amount?: number | null;
   currency?: string | null;
@@ -82,6 +89,8 @@ export interface Booking {
   paymentStatus?: PaymentStatus | null;
   meetingLocation?: string | null;
   meetingLink?: string | null;
+  meetingPlatform?: string | null;
+  meetingInstructions?: string | null;
   paidAt?: string | null;
   hasReview?: boolean;
   studentMessage?: string;
@@ -97,6 +106,12 @@ export interface BookingCreateData {
   proposalId?: number;
   paymentMethod: PaymentMethod;
   meetingLocation?: string;
+}
+
+export interface MeetingConfigData {
+  meetingLink?: string;
+  meetingPlatform?: string;
+  meetingInstructions?: string;
 }
 
 export interface PriceProposal {
@@ -149,6 +164,7 @@ export interface ProfessorDetail extends ProfessorCard {
 export interface SearchCriteria {
   cityId?: number;
   city?: string;
+  search?: string;
   subjectId?: number;
   levelId?: number;
   minPrice?: number;
@@ -277,6 +293,7 @@ export interface NotificationItem {
   title: string;
   message: string;
   type: string;
+  referenceId?: number | null;
   read: boolean;
   createdAt: string;
 }

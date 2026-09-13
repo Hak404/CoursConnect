@@ -1,5 +1,6 @@
 package com.coursconnect.rest;
 
+import com.coursconnect.exception.BadRequestException;
 import com.coursconnect.exception.ConflictException;
 import com.coursconnect.exception.ForbiddenException;
 import com.coursconnect.exception.NotFoundException;
@@ -71,9 +72,16 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
                     .entity("{\"error\": \"" + message + "\"}")
                     .build();
         }
-        if (exception instanceof IllegalArgumentException e) {
+        if (exception instanceof BadRequestException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"Données invalides\"}")
+                    .entity("{\"error\": \"" + escapeJson(e.getMessage()) + "\"}")
+                    .build();
+        }
+        if (exception instanceof IllegalArgumentException e) {
+            String message = e.getMessage() != null && !e.getMessage().isBlank()
+                    ? e.getMessage() : "Données invalides";
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + escapeJson(message) + "\"}")
                     .build();
         }
 

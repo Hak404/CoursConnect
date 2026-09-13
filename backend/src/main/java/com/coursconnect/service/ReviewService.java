@@ -50,7 +50,7 @@ public class ReviewService {
             throw new ConflictException("Vous avez déjà laissé un avis pour ce cours");
         }
         if (dto.getRating() == null || dto.getRating() < 1 || dto.getRating() > 5) {
-            throw new IllegalArgumentException("La note doit être entre 1 et 5");
+            throw new com.coursconnect.exception.BadRequestException("La note doit être entre 1 et 5");
         }
 
         Review review = new Review();

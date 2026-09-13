@@ -115,6 +115,12 @@ export default function Header() {
                     <Icon name="search" size={18} />
                     Rechercher un cours
                   </Link>
+                  {user.role === 'STUDENT' && (
+                    <Link to="/favoris" className="user-menu__item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
+                      <Icon name="heart" size={18} />
+                      Mes favoris
+                    </Link>
+                  )}
                   <button type="button" className="user-menu__item user-menu__item--danger" role="menuitem" onClick={handleLogout}>
                     <Icon name="logout" size={18} />
                     Déconnexion
@@ -157,6 +163,11 @@ export default function Header() {
               {mySpace && (
                 <NavLink to={mySpace.path} className="header__link" onClick={() => setMenuOpen(false)}>
                   <Icon name="users" size={18} /> {mySpace.label}
+                </NavLink>
+              )}
+              {user?.role === 'STUDENT' && (
+                <NavLink to="/favoris" className="header__link" onClick={() => setMenuOpen(false)}>
+                  <Icon name="heart" size={18} /> Mes favoris
                 </NavLink>
               )}
             </nav>

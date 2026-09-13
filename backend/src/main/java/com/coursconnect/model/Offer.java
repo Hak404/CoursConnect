@@ -48,6 +48,18 @@ public class Offer {
     @Column(nullable = false)
     private LocationType locationType;
 
+    @Size(max = 50)
+    @Column(name = "meeting_platform", length = 50)
+    private String meetingPlatform;
+
+    @Size(max = 500)
+    @Column(name = "meeting_link", length = 500)
+    private String meetingLink;
+
+    @Size(max = 2000)
+    @Column(name = "meeting_instructions", columnDefinition = "TEXT")
+    private String meetingInstructions;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -87,6 +99,12 @@ public class Offer {
     public void setCourseType(CourseType courseType) { this.courseType = courseType; }
     public LocationType getLocationType() { return locationType; }
     public void setLocationType(LocationType locationType) { this.locationType = locationType; }
+    public String getMeetingPlatform() { return meetingPlatform; }
+    public void setMeetingPlatform(String meetingPlatform) { this.meetingPlatform = meetingPlatform; }
+    public String getMeetingLink() { return meetingLink; }
+    public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
+    public String getMeetingInstructions() { return meetingInstructions; }
+    public void setMeetingInstructions(String meetingInstructions) { this.meetingInstructions = meetingInstructions; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public LocalDateTime getCreatedAt() { return createdAt; }

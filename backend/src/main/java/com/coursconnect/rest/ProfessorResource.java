@@ -40,6 +40,7 @@ public class ProfessorResource {
     public Response search(
             @QueryParam("cityId") Long cityId,
             @QueryParam("city") String city,
+            @QueryParam("search") String search,
             @QueryParam("subjectId") Long subjectId,
             @QueryParam("levelId") Long levelId,
             @QueryParam("minPrice") BigDecimal minPrice,
@@ -54,6 +55,7 @@ public class ProfessorResource {
         SearchCriteriaDTO criteria = new SearchCriteriaDTO();
         criteria.setCityId(cityId);
         criteria.setCityName(city);
+        criteria.setSearch(search);
         criteria.setSubjectId(subjectId);
         criteria.setLevelId(levelId);
         criteria.setMinPrice(minPrice);

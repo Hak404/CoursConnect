@@ -8,16 +8,18 @@ public class NotificationDTO {
     private String title;
     private String message;
     private String type;
+    private Long referenceId;
     private boolean read;
     private LocalDateTime createdAt;
 
     public NotificationDTO() {}
 
-    public NotificationDTO(Long id, String title, String message, String type, boolean read, LocalDateTime createdAt) {
+    public NotificationDTO(Long id, String title, String message, String type, Long referenceId, boolean read, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.message = message;
         this.type = type;
+        this.referenceId = referenceId;
         this.read = read;
         this.createdAt = createdAt;
     }
@@ -30,6 +32,8 @@ public class NotificationDTO {
     public void setMessage(String message) { this.message = message; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+    public Long getReferenceId() { return referenceId; }
+    public void setReferenceId(Long referenceId) { this.referenceId = referenceId; }
     public boolean isRead() { return read; }
     public void setRead(boolean read) { this.read = read; }
     public LocalDateTime getCreatedAt() { return createdAt; }

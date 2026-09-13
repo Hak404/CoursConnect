@@ -4,6 +4,7 @@ import com.coursconnect.config.CurrentUserHolder;
 import com.coursconnect.dto.BookingAcceptDTO;
 import com.coursconnect.dto.BookingCreateDTO;
 import com.coursconnect.dto.BookingRejectDTO;
+import com.coursconnect.dto.MeetingConfigDTO;
 import com.coursconnect.model.User;
 import com.coursconnect.model.enums.Role;
 import com.coursconnect.service.BookingService;
@@ -42,6 +43,28 @@ public class BookingResource {
         return Response.ok(bookingService.accept(user.getId(), id, dto)).build();
     }
 
+    @GET
+    @Path("/{id}")
+    public Response getById(@PathParam("id") Long id) {
+        User user = ProfessorResource.requireAuth(currentUser);
+        return Response.ok(bookingService.getParticipantBooking(user.getId(), id)).build();
+    }
+
+    @PUT
+    @Path("/{id}/meeting")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response saveMeeting(@PathParam("id") Long id, @Valid MeetingConfigDTO dto) {
+        User user = ProfessorResource.requireRole(currentUser, Role.PROFESSOR);
+        return Response.ok(bookingService.saveMeetingConfig(user.getId(), id, dto)).build();
+    }
+
+    @DELETE
+    @Path("/{id}/meeting")
+    public Response deleteMeeting(@PathParam("id") Long id) {
+        User user = ProfessorResource.requireRole(currentUser, Role.PROFESSOR);
+        return Response.ok(bookingService.deleteMeetingConfig(user.getId(), id)).build();
+    }
+
     @PUT
     @Path("/{id}/reject")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -56,6 +79,13 @@ public class BookingResource {
     public Response cancel(@PathParam("id") Long id) {
         User user = ProfessorResource.requireRole(currentUser, Role.STUDENT);
         return Response.ok(bookingService.cancel(user.getId(), id)).build();
+    }
+
+    @PUT
+    @Path("/{id}/professor-cancel")
+    public Response cancelByProfessor(@PathParam("id") Long id) {
+        User user = ProfessorResource.requireRole(currentUser, Role.PROFESSOR);
+        return Response.ok(bookingService.cancelByProfessor(user.getId(), id)).build();
     }
 
     @PUT

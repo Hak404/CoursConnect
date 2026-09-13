@@ -29,6 +29,9 @@ public class Notification {
     @Size(max = 50)
     private String type;
 
+    @Column(name = "reference_id")
+    private Long referenceId;
+
     @Column(name = "is_read", nullable = false)
     private boolean read = false;
 
@@ -53,6 +56,8 @@ public class Notification {
     public void setMessage(String message) { this.message = message; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+    public Long getReferenceId() { return referenceId; }
+    public void setReferenceId(Long referenceId) { this.referenceId = referenceId; }
     public boolean isRead() { return read; }
     public void setRead(boolean read) { this.read = read; }
     public LocalDateTime getCreatedAt() { return createdAt; }

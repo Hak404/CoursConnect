@@ -43,6 +43,9 @@ public class ProfessorService {
         ProfessorRepository.SearchArgs args = new ProfessorRepository.SearchArgs();
         args.cityId = criteria.getCityId();
         args.cityName = criteria.getCityName();
+        if (criteria.getSearch() != null && !criteria.getSearch().isBlank()) {
+            args.search = criteria.getSearch().trim();
+        }
         args.subjectId = criteria.getSubjectId();
         args.levelId = criteria.getLevelId();
         args.minPrice = criteria.getMinPrice();
@@ -154,6 +157,20 @@ public class ProfessorService {
         return toProfileDTO(professor);
     }
 
+    public ProfessorProfileDTO updateProfilePhoto(Long userId, String photoUrl) {
+        Professor professor = findProfessorByUserId(userId);
+        professor.setProfilePhoto(photoUrl);
+        professor = professorRepository.save(professor);
+        return toProfileDTO(professor);
+    }
+
+    public ProfessorProfileDTO clearProfilePhoto(Long userId) {
+        Professor professor = findProfessorByUserId(userId);
+        professor.setProfilePhoto(null);
+        professor = professorRepository.save(professor);
+        return toProfileDTO(professor);
+    }
+
     public Professor findProfessorByUserId(Long userId) {
         User user = userRepository.findById(userId);
         if (user == null) throw new NotFoundException("Utilisateur non trouvé");
@@ -253,6 +270,8 @@ public class ProfessorService {
         dto.setDurationMinutes(offer.getDurationMinutes());
         dto.setCourseType(offer.getCourseType());
         dto.setLocationType(offer.getLocationType());
+        // The platform name (Zoom, Meet...) is public info, the meeting link/instructions stay private.
+        dto.setMeetingPlatform(offer.getMeetingPlatform());
         dto.setActive(offer.isActive());
         dto.setCreatedAt(offer.getCreatedAt());
         return dto;

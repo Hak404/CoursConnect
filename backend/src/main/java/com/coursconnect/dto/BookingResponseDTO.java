@@ -12,6 +12,7 @@ public class BookingResponseDTO {
     private Long id;
     private Long studentId;
     private String studentName;
+    private String studentProfilePhoto;
     private Long professorId;
     private String professorName;
     private Long offerId;
@@ -20,6 +21,11 @@ public class BookingResponseDTO {
     private String locationType;
     private LocalDateTime scheduledAt;
     private BookingStatus status;
+    private BigDecimal professorRating;
+    private Integer professorReviewCount;
+    private String professorProfilePhoto;
+    private String subjectLabel;
+    private String levelLabel;
     private BigDecimal negotiatedPrice;
     private BigDecimal amount;
     private String currency;
@@ -27,6 +33,8 @@ public class BookingResponseDTO {
     private PaymentStatus paymentStatus;
     private String meetingLocation;
     private String meetingLink;
+    private String meetingPlatform;
+    private String meetingInstructions;
     private String paymentReference;
     private LocalDateTime paidAt;
     private boolean hasReview;
@@ -43,6 +51,8 @@ public class BookingResponseDTO {
     public void setStudentId(Long studentId) { this.studentId = studentId; }
     public String getStudentName() { return studentName; }
     public void setStudentName(String studentName) { this.studentName = studentName; }
+    public String getStudentProfilePhoto() { return studentProfilePhoto; }
+    public void setStudentProfilePhoto(String studentProfilePhoto) { this.studentProfilePhoto = studentProfilePhoto; }
     public Long getProfessorId() { return professorId; }
     public void setProfessorId(Long professorId) { this.professorId = professorId; }
     public String getProfessorName() { return professorName; }
@@ -59,6 +69,16 @@ public class BookingResponseDTO {
     public void setScheduledAt(LocalDateTime scheduledAt) { this.scheduledAt = scheduledAt; }
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }
+    public BigDecimal getProfessorRating() { return professorRating; }
+    public void setProfessorRating(BigDecimal professorRating) { this.professorRating = professorRating; }
+    public Integer getProfessorReviewCount() { return professorReviewCount; }
+    public void setProfessorReviewCount(Integer professorReviewCount) { this.professorReviewCount = professorReviewCount; }
+    public String getProfessorProfilePhoto() { return professorProfilePhoto; }
+    public void setProfessorProfilePhoto(String professorProfilePhoto) { this.professorProfilePhoto = professorProfilePhoto; }
+    public String getSubjectLabel() { return subjectLabel; }
+    public void setSubjectLabel(String subjectLabel) { this.subjectLabel = subjectLabel; }
+    public String getLevelLabel() { return levelLabel; }
+    public void setLevelLabel(String levelLabel) { this.levelLabel = levelLabel; }
     public BigDecimal getNegotiatedPrice() { return negotiatedPrice; }
     public void setNegotiatedPrice(BigDecimal negotiatedPrice) { this.negotiatedPrice = negotiatedPrice; }
     public BigDecimal getAmount() { return amount; }
@@ -73,6 +93,10 @@ public class BookingResponseDTO {
     public void setMeetingLocation(String meetingLocation) { this.meetingLocation = meetingLocation; }
     public String getMeetingLink() { return meetingLink; }
     public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
+    public String getMeetingPlatform() { return meetingPlatform; }
+    public void setMeetingPlatform(String meetingPlatform) { this.meetingPlatform = meetingPlatform; }
+    public String getMeetingInstructions() { return meetingInstructions; }
+    public void setMeetingInstructions(String meetingInstructions) { this.meetingInstructions = meetingInstructions; }
     public String getPaymentReference() { return paymentReference; }
     public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
     public LocalDateTime getPaidAt() { return paidAt; }

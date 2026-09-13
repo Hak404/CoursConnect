@@ -15,7 +15,7 @@ const COURSE_TYPE_LABELS: Record<CourseType, string> = {
 };
 
 const SORT_LABELS: Record<string, string> = {
-  rating: 'Note moyenne',
+  rating: 'Mieux notés',
   priceAsc: 'Prix croissant',
   priceDesc: 'Prix décroissant',
   reviews: "Nombre d'avis",
@@ -24,9 +24,14 @@ const SORT_LABELS: Record<string, string> = {
 
 type FilterName = 'cityId' | 'subjectId' | 'levelId' | 'courseType' | 'minPrice' | 'maxPrice' | 'minRating';
 
+const SEARCH_PLACEHOLDER = 'Rechercher un professeur, une matière ou une ville...';
+
 export default function Recherche() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') ?? '';
 
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [cityId, setCityId] = useState<number | ''>(
     searchParams.get('cityId') ? Number(searchParams.get('cityId')) : ''
   );
@@ -58,6 +63,13 @@ export default function Recherche() {
     };
   }, [filtersOpen]);
 
+  const advancedActive = courseType !== '' || minPrice !== '' || maxPrice !== '' || minRating !== '';
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  useEffect(() => {
+    if (advancedActive) setAdvancedOpen(true);
+  }, [advancedActive]);
+
   const [results, setResults] = useState<PagedResult<ProfessorCardType> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +97,7 @@ export default function Recherche() {
     setError(null);
     try {
       const data = await searchProfessors({
+        search: search ? search : undefined,
         cityId: cityId !== '' ? Number(cityId) : undefined,
         subjectId: subjectId !== '' ? Number(subjectId) : undefined,
         levelId: levelId !== '' ? Number(levelId) : undefined,
@@ -102,7 +115,7 @@ export default function Recherche() {
     } finally {
       setLoading(false);
     }
-  }, [cityId, subjectId, levelId, minPrice, maxPrice, minRating, courseType, sortBy, currentPage]);
+  }, [cityId, subjectId, levelId, minPrice, maxPrice, minRating, courseType, sortBy, search, currentPage]);
 
   useEffect(() => {
     loadProfessors();
@@ -121,6 +134,8 @@ export default function Recherche() {
 
   function clearAll() {
     setCurrentPage(0);
+    setSearchInput('');
+    setSearch('');
     setCityId('');
     setSubjectId('');
     setLevelId('');
@@ -132,6 +147,18 @@ export default function Recherche() {
     setSearchParams({});
   }
 
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput.trim());
+    setCurrentPage(0);
+  }
+
+  function clearSearch() {
+    setSearchInput('');
+    setSearch('');
+    setCurrentPage(0);
+  }
+
   function handlePageChange(page: number) {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -139,6 +166,9 @@ export default function Recherche() {
 
   const chips = useMemo(() => {
     const list: { key: string; label: string; clear: () => void }[] = [];
+    if (search) {
+      list.push({ key: 'search', label: `Recherche : « ${search} »`, clear: clearSearch });
+    }
     const city = cities.find((c) => c.id === cityId);
     if (city) list.push({ key: 'city', label: city.name, clear: () => updateFilter('cityId', '') });
     const subject = subjects.find((s) => s.id === subjectId);
@@ -159,7 +189,7 @@ export default function Recherche() {
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityId, subjectId, levelId, courseType, minPrice, maxPrice, minRating, cities, subjects, levels]);
+  }, [search, cityId, subjectId, levelId, courseType, minPrice, maxPrice, minRating, cities, subjects, levels]);
 
   return (
     <div className="recherche-page container">
@@ -178,7 +208,7 @@ export default function Recherche() {
           </button>
         </div>
 
-        <div className={`filter-panel__content`}>
+        <div className="filter-panel__content">
           <div className="filter-group">
             <span className="filter-group__label">
               Ville <Icon name="map-pin" size={14} className="cc-icon" />
@@ -230,73 +260,87 @@ export default function Recherche() {
             </select>
           </div>
 
-          <div className="filter-group">
-            <span className="filter-group__label">
-              Type de cours <Icon name="video" size={14} className="cc-icon" />
+          <button
+            type="button"
+            className={`filter-panel__advanced-toggle${advancedOpen ? ' is-open' : ''}`}
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((o) => !o)}
+          >
+            <span className="filter-group__label" style={{ margin: 0 }}>
+              Filtres avancés
             </span>
-            <select
-              className="form-select"
-              value={courseType}
-              onChange={(e) => updateFilter('courseType', e.target.value as CourseType | '')}
-              aria-label="Type de cours"
-            >
-              <option value="">Tous les types</option>
-              {(Object.keys(COURSE_TYPE_LABELS) as CourseType[]).map((t) => (
-                <option key={t} value={t}>{COURSE_TYPE_LABELS[t]}</option>
-              ))}
-            </select>
-          </div>
+            <Icon name="chevron-down" size={15} className="cc-icon" />
+          </button>
 
-          <div className="filter-group">
-            <span className="filter-group__label">
-              Tarif (DH/heure) <Icon name="wallet" size={14} className="cc-icon" />
-            </span>
-            <div className="price-range-inputs">
-              <input
-                type="number"
-                className="form-input"
-                placeholder="Min"
-                min={0}
-                value={minPrice}
-                onChange={(e) => updateFilter('minPrice', e.target.value ? Number(e.target.value) : '')}
-                aria-label="Prix minimum"
-              />
-              <span className="range-separator">–</span>
-              <input
-                type="number"
-                className="form-input"
-                placeholder="Max"
-                min={0}
-                value={maxPrice}
-                onChange={(e) => updateFilter('maxPrice', e.target.value ? Number(e.target.value) : '')}
-                aria-label="Prix maximum"
-              />
+          <div className="filter-panel__advanced" hidden={!advancedOpen}>
+            <div className="filter-group">
+              <span className="filter-group__label">
+                Type de cours <Icon name="video" size={14} className="cc-icon" />
+              </span>
+              <select
+                className="form-select"
+                value={courseType}
+                onChange={(e) => updateFilter('courseType', e.target.value as CourseType | '')}
+                aria-label="Type de cours"
+              >
+                <option value="">Tous les types</option>
+                {(Object.keys(COURSE_TYPE_LABELS) as CourseType[]).map((t) => (
+                  <option key={t} value={t}>{COURSE_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          <div className="filter-group">
-            <span className="filter-group__label">
-              Note minimum <Icon name="star" size={14} className="cc-icon" />
-            </span>
-            <div className="rating-filter">
-              {[4, 3, 2].map((r) => (
-                <label key={r} className={`rating-option ${minRating === r ? 'is-active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="minRating"
-                    checked={minRating === r}
-                    onChange={() => updateFilter('minRating', r)}
-                  />
-                  <span className="stars" aria-hidden="true">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <span key={n} style={{ color: n <= r ? 'var(--star)' : 'var(--star-empty)', display: 'inline-flex' }}>
-                        <Icon name="star" size={13} className="cc-icon" />
-                      </span>
-                    ))}
-                  </span>
-                  <span>{r} et plus</span>
-                </label>
-              ))}
+            <div className="filter-group">
+              <span className="filter-group__label">
+                Tarif (DH/heure) <Icon name="wallet" size={14} className="cc-icon" />
+              </span>
+              <div className="price-range-inputs">
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="Min"
+                  min={0}
+                  value={minPrice}
+                  onChange={(e) => updateFilter('minPrice', e.target.value ? Number(e.target.value) : '')}
+                  aria-label="Prix minimum"
+                />
+                <span className="range-separator">–</span>
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="Max"
+                  min={0}
+                  value={maxPrice}
+                  onChange={(e) => updateFilter('maxPrice', e.target.value ? Number(e.target.value) : '')}
+                  aria-label="Prix maximum"
+                />
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <span className="filter-group__label">
+                Note minimum <Icon name="star" size={14} className="cc-icon" />
+              </span>
+              <div className="rating-filter">
+                {[4, 3, 2].map((r) => (
+                  <label key={r} className={`rating-option ${minRating === r ? 'is-active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="minRating"
+                      checked={minRating === r}
+                      onChange={() => updateFilter('minRating', r)}
+                    />
+                    <span className="stars" aria-hidden="true">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <span key={n} style={{ color: n <= r ? 'var(--star)' : 'var(--star-empty)', display: 'inline-flex' }}>
+                          <Icon name="star" size={13} className="cc-icon" />
+                        </span>
+                      ))}
+                    </span>
+                    <span>{r} et plus</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -317,12 +361,35 @@ export default function Recherche() {
           </div>
 
           {chips.length > 0 && (
-            <Button variant="secondary" full onClick={clearAll}>Effacer les filtres</Button>
+            <Button variant="secondary" full onClick={clearAll}>Réinitialiser les filtres</Button>
           )}
         </div>
       </aside>
 
       <section className="results">
+        <form className="results__search" role="search" onSubmit={handleSearchSubmit}>
+          <Icon name="search" size={20} className="cc-icon results__search-icon" />
+          <input
+            type="search"
+            className="results__search-input"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={SEARCH_PLACEHOLDER}
+            aria-label={SEARCH_PLACEHOLDER}
+          />
+          {searchInput && (
+            <button
+              type="button"
+              className="results__search-clear"
+              onClick={clearSearch}
+              aria-label="Effacer la recherche"
+            >
+              <Icon name="x" size={16} className="cc-icon" />
+            </button>
+          )}
+          <Button type="submit" variant="accent">Rechercher</Button>
+        </form>
+
         <div className="results__toolbar">
           <div className="results__toolbar-left">
             <button type="button" className="filter-drawer-trigger" onClick={() => setFiltersOpen(true)}>
@@ -364,7 +431,7 @@ export default function Recherche() {
           </div>
         )}
 
-        {loading && <LoadingState skeleton cards={3} />}
+        {loading && <LoadingState skeleton variant="prof" cards={3} />}
 
         {error && (
           <div className="error-banner">
@@ -379,8 +446,11 @@ export default function Recherche() {
             {results.contenu.length === 0 ? (
               <EmptyState
                 emoji="🔎"
-                title="Aucun professeur trouvé"
-                text="Essayez d'élargir votre recherche : supprimez quelques filtres ou changez la ville."
+                title={search || chips.length > 0 ? 'Aucun professeur ne correspond à votre recherche' : 'Aucun professeur trouvé'}
+                text="Essayez d'élargir votre recherche : supprimez quelques filtres, changez la ville ou la matière."
+                action={chips.length > 0 ? (
+                  <Button variant="secondary" onClick={clearAll}>Effacer les filtres</Button>
+                ) : undefined}
               />
             ) : (
               <div className="prof-grid">

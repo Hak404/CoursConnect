@@ -29,7 +29,8 @@ public class AuthFilter implements ContainerRequestFilter {
         "/niveaux",
         "/matieres",
         "/levels",
-        "/home"
+        "/home",
+        "/uploads"
     );
 
     @EJB

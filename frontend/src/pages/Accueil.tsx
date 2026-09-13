@@ -126,7 +126,7 @@ export default function Accueil() {
           </div>
 
           {loading ? (
-            <LoadingState skeleton cards={3} />
+            <LoadingState skeleton variant="prof" cards={3} />
           ) : home && home.topProfessors.length > 0 ? (
             <div className="prof-grid">
               {home.topProfessors.map((prof) => (

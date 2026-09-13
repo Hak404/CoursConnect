@@ -43,6 +43,19 @@ public class NotificationRepository {
         return em.merge(notification);
     }
 
+    public Notification findById(Long id) {
+        return em.find(Notification.class, id);
+    }
+
+    public Notification findByIdAndUser(Long id, User user) {
+        TypedQuery<Notification> q = em.createQuery(
+            "SELECT n FROM Notification n WHERE n.id = :id AND n.user = :user", Notification.class);
+        q.setParameter("id", id);
+        q.setParameter("user", user);
+        List<Notification> result = q.getResultList();
+        return result.isEmpty() ? null : result.get(0);
+    }
+
     public void markAllRead(User user) {
         em.createQuery("UPDATE Notification n SET n.read = true WHERE n.user = :user")
                 .setParameter("user", user)

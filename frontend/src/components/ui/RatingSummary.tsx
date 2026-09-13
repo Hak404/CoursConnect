@@ -18,6 +18,7 @@ export default function RatingSummary({ average, count, distribution }: RatingSu
   return (
     <div className="review-summary">
       <div className="review-summary__score">
+        <p className="review-summary__label">Note moyenne</p>
         <div className="review-summary__avg">
           {average != null ? average.toFixed(1) : '—'}
           <small> / 5</small>

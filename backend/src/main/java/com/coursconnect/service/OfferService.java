@@ -5,6 +5,7 @@ import com.coursconnect.exception.NotFoundException;
 import com.coursconnect.model.Offer;
 import com.coursconnect.model.Professor;
 import com.coursconnect.repository.OfferRepository;
+import com.coursconnect.util.UrlValidator;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import java.util.List;
@@ -72,6 +73,13 @@ public class OfferService {
         if (dto.getDurationMinutes() != null) offer.setDurationMinutes(dto.getDurationMinutes());
         if (dto.getCourseType() != null) offer.setCourseType(dto.getCourseType());
         if (dto.getLocationType() != null) offer.setLocationType(dto.getLocationType());
+        if (dto.getMeetingPlatform() != null) {
+            offer.setMeetingPlatform(UrlValidator.normalizedOrNull(dto.getMeetingPlatform()));
+        }
+        // The meeting link lives on the booking, not on the offer: it is added by
+        // the professor after a reservation is accepted and stays private.
+        offer.setMeetingLink(null);
+        offer.setMeetingInstructions(null);
         offer.setActive(dto.isActive());
     }
 
@@ -85,6 +93,7 @@ public class OfferService {
         dto.setDurationMinutes(offer.getDurationMinutes());
         dto.setCourseType(offer.getCourseType());
         dto.setLocationType(offer.getLocationType());
+        dto.setMeetingPlatform(offer.getMeetingPlatform());
         dto.setActive(offer.isActive());
         dto.setCreatedAt(offer.getCreatedAt());
         return dto;

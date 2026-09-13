@@ -36,7 +36,23 @@ public class NotificationService {
         }
     }
 
+    public boolean markRead(Long userId, Long notificationId) {
+        User user = userRepository.findById(userId);
+        if (user == null) return false;
+        Notification n = notificationRepository.findByIdAndUser(notificationId, user);
+        if (n == null) return false;
+        if (!n.isRead()) {
+            n.setRead(true);
+            notificationRepository.save(n);
+        }
+        return true;
+    }
+
     public void notify(Long userId, String title, String message, String type) {
+        notify(userId, title, message, type, null);
+    }
+
+    public void notify(Long userId, String title, String message, String type, Long referenceId) {
         User user = userRepository.findById(userId);
         if (user == null) return;
         Notification n = new Notification();
@@ -44,11 +60,12 @@ public class NotificationService {
         n.setTitle(title);
         n.setMessage(message);
         n.setType(type);
+        n.setReferenceId(referenceId);
         notificationRepository.save(n);
     }
 
     private NotificationDTO toDTO(Notification n) {
         return new NotificationDTO(n.getId(), n.getTitle(), n.getMessage(),
-                n.getType(), n.isRead(), n.getCreatedAt());
+                n.getType(), n.getReferenceId(), n.isRead(), n.getCreatedAt());
     }
 }

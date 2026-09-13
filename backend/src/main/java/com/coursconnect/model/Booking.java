@@ -77,6 +77,14 @@ public class Booking {
     @Column(name = "meeting_link", length = 500)
     private String meetingLink;
 
+    @Size(max = 50)
+    @Column(name = "meeting_platform", length = 50)
+    private String meetingPlatform;
+
+    @Size(max = 2000)
+    @Column(name = "meeting_instructions", columnDefinition = "TEXT")
+    private String meetingInstructions;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -131,6 +139,10 @@ public class Booking {
     public void setMeetingLocation(String meetingLocation) { this.meetingLocation = meetingLocation; }
     public String getMeetingLink() { return meetingLink; }
     public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
+    public String getMeetingPlatform() { return meetingPlatform; }
+    public void setMeetingPlatform(String meetingPlatform) { this.meetingPlatform = meetingPlatform; }
+    public String getMeetingInstructions() { return meetingInstructions; }
+    public void setMeetingInstructions(String meetingInstructions) { this.meetingInstructions = meetingInstructions; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

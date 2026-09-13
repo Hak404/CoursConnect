@@ -29,7 +29,8 @@ public class ApplicationConfig extends Application {
                 PriceProposalResource.class,
                 ReviewResource.class,
                 StudentResource.class,
-                SubjectResource.class
+                SubjectResource.class,
+                UploadResource.class
         );
     }
 }

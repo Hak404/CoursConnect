@@ -84,6 +84,13 @@ public class ProfessorRepository {
         if (args.levelId != null) {
             jpql.append(" AND :levelId IN (SELECT l.id FROM p.levels l)");
         }
+        if (args.search != null && !args.search.isBlank()) {
+            jpql.append(" AND (LOWER(p.user.firstName) LIKE :search")
+                    .append(" OR LOWER(p.user.lastName) LIKE :search")
+                    .append(" OR LOWER(CONCAT(COALESCE(p.user.firstName,''), ' ', COALESCE(p.user.lastName,''))) LIKE :search")
+                    .append(" OR LOWER(p.city.name) LIKE :search")
+                    .append(" OR EXISTS (SELECT s FROM p.subjects s WHERE LOWER(s.name) LIKE :search))");
+        }
         if (args.minRating != null) {
             jpql.append(" AND COALESCE(p.averageRating, 0) >= :minRating");
         }
@@ -102,6 +109,9 @@ public class ProfessorRepository {
     private void setParams(TypedQuery<?> query, SearchArgs args) {
         if (args.cityId != null) query.setParameter("cityId", args.cityId);
         if (args.cityName != null && !args.cityName.trim().isEmpty()) query.setParameter("cityName", args.cityName);
+        if (args.search != null && !args.search.isBlank()) {
+            query.setParameter("search", "%" + args.search.trim().toLowerCase(java.util.Locale.ROOT) + "%");
+        }
         if (args.subjectId != null) query.setParameter("subjectId", args.subjectId);
         if (args.levelId != null) query.setParameter("levelId", args.levelId);
         if (args.minRating != null) query.setParameter("minRating", args.minRating);
@@ -113,6 +123,7 @@ public class ProfessorRepository {
     public static class SearchArgs {
         public Long cityId;
         public String cityName;
+        public String search;
         public Long subjectId;
         public Long levelId;
         public java.math.BigDecimal minPrice;

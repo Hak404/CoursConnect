@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -6,8 +6,10 @@ import {
   getMyOffers, createOffer, updateOffer, deleteOffer,
   getMyAvailability, createAvailability, deleteAvailability,
   getMyProfessorBookings, acceptBooking, rejectBooking, completeBooking, markBookingPaid,
+  saveMeetingConfig, deleteMeetingConfig,
   getMyReviews,
   getProfessorProposals, acceptProposal, rejectProposal,
+  uploadProfessorPhoto, deleteProfessorPhoto,
 } from '../../services/api';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import Avatar from '../../components/ui/Avatar';
@@ -23,14 +25,16 @@ import { Input, Select, Textarea } from '../../components/ui/Field';
 import {
   formatDay, formatCourseType, formatLocationType,
   formatDateFR, formatTimeFR, formatPaymentMethod, formatPaymentStatus, DAY_ORDER as DAYS,
+  isSafeMeetingUrl, safeMeetingUrl, MEETING_PLATFORMS, MEETING_LINK_HELP, ONLINE_ACCEPT_HINT,
 } from '../../utils/labels';
-import type { ProfessorProfile, City, Subject, Level, Offer, Availability, Booking, Review, PriceProposal, BookingStatus } from '../../types';
+import type { ProfessorProfile, City, Subject, Level, Offer, Availability, Booking, Review, PriceProposal, BookingStatus, MeetingConfigData } from '../../types';
 
 type Tab = 'overview' | 'profile' | 'offers' | 'availability' | 'bookings' | 'proposals' | 'reviews' | 'settings';
 type BookingFilter = 'ALL' | BookingStatus;
 
 const emptyOffer: Omit<Offer, 'id' | 'professorId' | 'active' | 'createdAt'> = {
   title: '', description: '', price: 0, durationMinutes: 60, courseType: 'INDIVIDUAL', locationType: 'STUDENT_HOME',
+  meetingPlatform: '',
 };
 const emptyAvailability: { dayOfWeek: string; startTime: string; endTime: string } = { dayOfWeek: 'MONDAY', startTime: '09:00', endTime: '11:00' };
 
@@ -92,12 +96,20 @@ export default function ProfessorDashboard() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectSaving, setRejectSaving] = useState(false);
   const [rejectError, setRejectError] = useState('');
-  const [acceptTarget, setAcceptTarget] = useState<Booking | null>(null);
-  const [acceptLink, setAcceptLink] = useState('');
-  const [acceptLoc, setAcceptLoc] = useState('');
-  const [acceptSaving, setAcceptSaving] = useState(false);
-  const [acceptError, setAcceptError] = useState('');
-  const [bookingFilter, setBookingFilter] = useState<BookingFilter>('ALL');
+const [acceptTarget, setAcceptTarget] = useState<Booking | null>(null);
+const [acceptSaving, setAcceptSaving] = useState(false);
+const [acceptError, setAcceptError] = useState('');
+const [bookingFilter, setBookingFilter] = useState<BookingFilter>('ALL');
+const [meetingEditor, setMeetingEditor] = useState<Record<number, boolean>>({});
+const [meetingDraft, setMeetingDraft] = useState<Record<number, MeetingConfigData>>({});
+const [meetingSavingId, setMeetingSavingId] = useState<number | null>(null);
+const [meetingError, setMeetingError] = useState('');
+
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchCities().then(setCities).catch(() => {});
@@ -111,6 +123,7 @@ export default function ProfessorDashboard() {
     getMyProfessorProfile()
       .then((p) => {
         setProfile(p);
+        setPhotoUrl(p.profilePhoto || null);
         setPhone(p.phone || '');
         setCityId(p.cityId || '');
         setBio(p.bio || '');
@@ -138,6 +151,54 @@ export default function ProfessorDashboard() {
 
   function toggleLevel(id: number) {
     setSelectedLevels((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setPhotoMessage('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp|jpg)$/i.test(file.type)) {
+      setPhotoMessage('Erreur : seuls les formats JPG, PNG et WEBP sont acceptés.');
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoMessage('Erreur : la photo ne doit pas dépasser 5 Mo.');
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      return;
+    }
+    const local = URL.createObjectURL(file);
+    setPhotoPreview(local);
+    setPhotoSaving(true);
+    try {
+      const updated = await uploadProfessorPhoto(file);
+      setPhotoUrl(updated.profilePhoto || null);
+      setProfile(updated);
+      setPhotoMessage('Photo de profil mise à jour avec succès.');
+    } catch (err) {
+      setPhotoPreview(null);
+      setPhotoMessage(err instanceof Error ? `Erreur : ${err.message}` : 'Erreur lors de l\'upload.');
+    } finally {
+      URL.revokeObjectURL(local);
+      setPhotoSaving(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  }
+
+  async function handlePhotoDelete() {
+    setPhotoMessage('');
+    setPhotoSaving(true);
+    try {
+      const updated = await deleteProfessorPhoto();
+      setPhotoUrl(null);
+      setPhotoPreview(null);
+      setProfile(updated);
+      setPhotoMessage('Photo de profil supprimée.');
+    } catch (err) {
+      setPhotoMessage(err instanceof Error ? `Erreur : ${err.message}` : 'Erreur lors de la suppression.');
+    } finally {
+      setPhotoSaving(false);
+    }
   }
 
   async function handleSaveProfile() {
@@ -192,6 +253,7 @@ export default function ProfessorDashboard() {
       durationMinutes: o.durationMinutes,
       courseType: o.courseType,
       locationType: o.locationType,
+      meetingPlatform: o.meetingPlatform || '',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -244,8 +306,6 @@ export default function ProfessorDashboard() {
   function promptAccept(b: Booking) {
     if (b.locationType === 'ONLINE') {
       setAcceptTarget(b);
-      setAcceptLink('');
-      setAcceptLoc('');
       setAcceptError('');
     } else {
       handleBookingAction(b.id, 'accept');
@@ -267,10 +327,7 @@ export default function ProfessorDashboard() {
     setAcceptSaving(true);
     setAcceptError('');
     try {
-      await acceptBooking(acceptTarget.id, {
-        meetingLink: acceptLink.trim() || undefined,
-        meetingLocation: acceptLoc.trim() || undefined,
-      });
+      await acceptBooking(acceptTarget.id, {});
       setAcceptTarget(null);
       setBookings(await getMyProfessorBookings());
     } catch (err) {
@@ -286,6 +343,60 @@ export default function ProfessorDashboard() {
       setBookings(await getMyProfessorBookings());
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Erreur');
+    }
+  }
+
+  function offerPlatformOf(booking: Booking): string {
+    const offer = offers.find((o) => o.id === booking.offerId);
+    return offer?.meetingPlatform || '';
+  }
+
+  function openMeetingEditor(b: Booking) {
+    setMeetingError('');
+    const platform = b.meetingPlatform || offerPlatformOf(b);
+    setMeetingDraft((prev) => ({
+      ...prev,
+      [b.id]: { meetingLink: b.meetingLink || '', meetingPlatform: platform, meetingInstructions: b.meetingInstructions || '' },
+    }));
+    setMeetingEditor((prev) => ({ ...prev, [b.id]: true }));
+  }
+
+  function closeMeetingEditor(id: number) {
+    setMeetingEditor((prev) => ({ ...prev, [id]: false }));
+  }
+
+  async function handleMeetingSave(b: Booking) {
+    const draft = meetingDraft[b.id];
+    if (!draft) return;
+    setMeetingSavingId(b.id);
+    setMeetingError('');
+    try {
+      await saveMeetingConfig(b.id, {
+        meetingLink: draft.meetingLink?.trim() || undefined,
+        meetingPlatform: draft.meetingPlatform?.trim() || undefined,
+        meetingInstructions: draft.meetingInstructions?.trim() || undefined,
+      });
+      closeMeetingEditor(b.id);
+      setBookings(await getMyProfessorBookings());
+    } catch (err) {
+      setMeetingError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setMeetingSavingId(null);
+    }
+  }
+
+  async function handleMeetingDelete(b: Booking) {
+    if (!window.confirm('Supprimer le lien de cette séance ?')) return;
+    setMeetingSavingId(b.id);
+    setMeetingError('');
+    try {
+      await deleteMeetingConfig(b.id);
+      closeMeetingEditor(b.id);
+      setBookings(await getMyProfessorBookings());
+    } catch (err) {
+      setMeetingError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setMeetingSavingId(null);
     }
   }
 
@@ -317,6 +428,13 @@ export default function ProfessorDashboard() {
     () => (bookingFilter === 'ALL' ? bookings : bookings.filter((b) => b.status === bookingFilter)),
     [bookings, bookingFilter],
   );
+
+  const onlineConfirmed = bookings.filter(
+    (b) => b.locationType === 'ONLINE' && (b.status === 'ACCEPTED' || b.status === 'COMPLETED'),
+  );
+  const onlineConfirmedCount = onlineConfirmed.length;
+  const onlineWithLink = onlineConfirmed.filter((b) => isSafeMeetingUrl(b.meetingLink)).length;
+  const onlineMissingLink = Math.max(0, onlineConfirmedCount - onlineWithLink);
 
   const navItems = [
     { id: 'overview' as Tab, label: "Vue d'ensemble", icon: 'home' as const },
@@ -355,6 +473,27 @@ export default function ProfessorDashboard() {
             <StatCard icon="book" label="Offres publiées" value={offers.length} tone="primary" />
             <StatCard icon="clock" label={pendingBookings > 0 ? 'Réservations en attente' : 'Aucune en attente'} value={pendingBookings} tone="info" />
           </div>
+
+          {onlineConfirmedCount > 0 && (
+            <section className="dash-card">
+              <div className="dash-card__title">
+                <h2>Cours en ligne confirmés</h2>
+                <Badge variant="yellow">{onlineConfirmedCount} confirmé(s) · {onlineWithLink} lien(s) ajouté(s) · {onlineMissingLink} à ajouter</Badge>
+              </div>
+              {onlineMissingLink > 0 && (
+                <p className="muted">
+                  {onlineMissingLink} cours en ligne confirmé(s) n'ont pas encore de lien de séance. Ajoutez-les depuis
+                  l'onglet <strong>Réservations</strong> pour que vos élèves puissent rejoindre leur cours.
+                </p>
+              )}
+              {onlineMissingLink === 0 && (
+                <p className="muted">Tous vos cours en ligne confirmés ont un lien de séance. </p>
+              )}
+              <div className="booking-item__actions" style={{ marginTop: '0.75rem' }}>
+                <Button size="sm" icon="video" variant="outline" onClick={() => { setBookingFilter('ALL'); setTab('bookings'); }}>Gérer les liens</Button>
+              </div>
+            </section>
+          )}
           <section className="dash-card">
             <div className="dash-card__title"><h2>Bienvenue dans votre espace</h2></div>
             <p>
@@ -375,6 +514,36 @@ export default function ProfessorDashboard() {
       {tab === 'profile' && profile && (
         <section className="dash-card">
           <div className="dash-card__title"><h2>Mon Profil</h2></div>
+          <div className="photo-block">
+            <div className="photo-block__avatar">
+              <Avatar
+                name={`${profile.firstName} ${profile.lastName}`}
+                src={photoPreview ?? photoUrl ?? undefined}
+                size="xl"
+              />
+            </div>
+            <div className="photo-block__actions">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                onChange={handlePhotoChange}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <Button size="sm" icon="camera" onClick={() => photoInputRef.current?.click()} loading={photoSaving}>
+                  {photoUrl || photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                </Button>
+                {(photoUrl || photoPreview) && !photoSaving && (
+                  <Button size="sm" variant="ghost" icon="trash" onClick={handlePhotoDelete}>Supprimer</Button>
+                )}
+              </div>
+              <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>
+                JPG, PNG ou WEBP · 5 Mo maximum. Affichée sur votre fiche et vos cartes.
+              </p>
+              {photoMessage && <span className={`photo-block__msg ${photoMessage.startsWith('Erreur') ? 'is-error' : ''}`}>{photoMessage}</span>}
+            </div>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <span className="form-label">Nom complet (public)</span>
@@ -465,6 +634,17 @@ export default function ProfessorDashboard() {
             </Select>
           </div>
           <Textarea label="Description" id="o-desc" rows={2} value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} />
+          {offerForm.courseType === 'ONLINE' || offerForm.locationType === 'ONLINE' ? (
+            <div className="meeting-fields">
+              <Select label="Plateforme de visioconférence (préférée)" id="o-meet-plat" value={offerForm.meetingPlatform || ''} onChange={(e) => setOfferForm({ ...offerForm, meetingPlatform: e.target.value })}>
+                <option value="">— Sélectionner —</option>
+                {MEETING_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </Select>
+              <p className="meeting-fields__help">
+                {MEETING_LINK_HELP}
+              </p>
+            </div>
+          ) : null}
           {offerMessage && <div className={offerMessage.includes('Erreur') ? 'error-banner' : 'success-banner'}><p>{offerMessage}</p></div>}
           <Button onClick={handleOfferSubmit} loading={offerSaving} disabled={!offerForm.title || offerForm.price <= 0}>
             {offerSaving ? 'Enregistrement...' : editingOfferId !== null ? "Mettre à jour l'offre" : "Créer l'offre"}
@@ -489,6 +669,12 @@ export default function ProfessorDashboard() {
                           <span className="booking-meta-item"><Icon name="wallet" size={16} />{o.price} DH/heure</span>
                           <span className="booking-meta-item"><Icon name="clock" size={16} />{o.durationMinutes} min</span>
                           <span className="booking-meta-item"><Icon name="compass" size={16} />{formatCourseType(o.courseType)} · {formatLocationType(o.locationType)}</span>
+                          {(o.courseType === 'ONLINE' || o.locationType === 'ONLINE') && (
+                            <span className="booking-meta-item"><Icon name="video" size={16} />
+                              {o.meetingPlatform || 'En ligne'}
+                              <span className="muted"> · lien ajouté à la réservation après acceptation</span>
+                            </span>
+                          )}
                         </span>
                       </div>
                       <Badge variant={o.active ? 'yellow' : 'neutral'}>{o.active ? 'Active' : 'Inactive'}</Badge>
@@ -597,10 +783,89 @@ export default function ProfessorDashboard() {
                   <div className="booking-item__meta">
                     <span className="booking-meta-item"><Icon name="calendar" size={16} />{formatDateFR(b.scheduledAt)}</span>
                     <span className="booking-meta-item"><Icon name="clock" size={16} />{formatTimeFR(b.scheduledAt)}{b.durationMinutes ? ` · ${b.durationMinutes} min` : ''}</span>
-                  </div>
-                  {b.locationType && b.locationType !== 'ONLINE' && (
-                    <div className="booking-item__meta">
+                    {b.locationType === 'ONLINE' ? (
+                      <span className="booking-meta-item"><Icon name="video" size={16} />{b.meetingPlatform ? `${b.meetingPlatform} · ` : ''}En ligne</span>
+                    ) : b.locationType ? (
                       <span className="booking-meta-item"><Icon name="map-pin" size={16} />{formatLocationType(b.locationType)}</span>
+                    ) : null}
+                  </div>
+                  {(b.locationType === 'ONLINE' && (b.status === 'ACCEPTED' || b.status === 'COMPLETED')) && (
+                    <div className="booking-meeting">
+                      <div className="booking-meeting__head">
+                        <span className="booking-meeting__label">Cours en ligne</span>
+                        {isSafeMeetingUrl(b.meetingLink) ? (
+                          <Badge variant="green" icon="check-circle">Lien ajouté</Badge>
+                        ) : (
+                          <Badge variant="yellow" icon="clock">Lien à ajouter</Badge>
+                        )}
+                      </div>
+                      {isSafeMeetingUrl(b.meetingLink) ? (
+                        <>
+                          <a href={safeMeetingUrl(b.meetingLink)} target="_blank" rel="noopener noreferrer">Rejoindre la séance</a>
+                          {b.meetingPlatform ? <span className="muted"> · {b.meetingPlatform}</span> : null}
+                          {b.meetingInstructions ? <p className="booking-meeting__instr">{b.meetingInstructions}</p> : null}
+                        </>
+                      ) : (
+                        <p className="muted">Aucun lien configuré pour cette séance. Ajoutez-le pour que l'élève puisse rejoindre le cours.</p>
+                      )}
+
+                      {meetingEditor[b.id] ? (
+                        <div className="meeting-editor">
+                          <Select
+                            label="Plateforme"
+                            id={`m-plat-${b.id}`}
+                            value={meetingDraft[b.id]?.meetingPlatform || ''}
+                            onChange={(e) => setMeetingDraft((prev) => ({ ...prev, [b.id]: { ...prev[b.id], meetingPlatform: e.target.value } }))}
+                          >
+                            <option value="">— Sélectionner —</option>
+                            {MEETING_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+                            {(b.meetingPlatform && !MEETING_PLATFORMS.includes(b.meetingPlatform as never)) && (
+                              <option value={b.meetingPlatform}>{b.meetingPlatform}</option>
+                            )}
+                          </Select>
+                          <Input
+                            label="Lien de la séance (https)"
+                            id={`m-link-${b.id}`}
+                            type="url"
+                            value={meetingDraft[b.id]?.meetingLink || ''}
+                            onChange={(e) => setMeetingDraft((prev) => ({ ...prev, [b.id]: { ...prev[b.id], meetingLink: e.target.value } }))}
+                            placeholder="https://zoom.us/j/..."
+                            maxLength={500}
+                          />
+                          <Textarea
+                            label="Instructions pour l'élève (optionnel)"
+                            id={`m-instr-${b.id}`}
+                            rows={2}
+                            value={meetingDraft[b.id]?.meetingInstructions || ''}
+                            onChange={(e) => setMeetingDraft((prev) => ({ ...prev, [b.id]: { ...prev[b.id], meetingInstructions: e.target.value } }))}
+                            placeholder="Code d'accès, matériel à prévoir..."
+                            maxLength={2000}
+                          />
+                          {meetingError && <div className="error-banner"><p>{meetingError}</p></div>}
+                          <div className="booking-item__actions">
+                            <Button size="sm" icon="check" onClick={() => handleMeetingSave(b)} loading={meetingSavingId === b.id}>
+                              Enregistrer le lien
+                            </Button>
+                            {isSafeMeetingUrl(b.meetingLink) && (
+                              <Button size="sm" variant="danger-ghost" icon="trash" onClick={() => handleMeetingDelete(b)} loading={meetingSavingId === b.id}>
+                                Supprimer le lien
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" onClick={() => closeMeetingEditor(b.id)}>Annuler</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="booking-item__actions">
+                          <Button size="sm" variant="outline" icon="edit" onClick={() => openMeetingEditor(b)}>
+                            {isSafeMeetingUrl(b.meetingLink) ? 'Modifier le lien' : 'Ajouter le lien'}
+                          </Button>
+                          {isSafeMeetingUrl(b.meetingLink) && !meetingEditor[b.id] && (
+                            <Button size="sm" variant="danger-ghost" icon="trash" onClick={() => handleMeetingDelete(b)} loading={meetingSavingId === b.id}>
+                              Supprimer
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   {b.amount != null && (
@@ -709,10 +974,14 @@ export default function ProfessorDashboard() {
                 <div key={r.id} className="review-item">
                   <div className="review-item__head">
                     <strong>{r.studentName}</strong>
-                    <RatingStarsDisplay value={r.rating} size={1} showValue />
+                    <div className="review-item__stars">
+                      <RatingStarsDisplay value={r.rating} size={15} showValue />
+                    </div>
+                    <time className="review-item__date" dateTime={r.createdAt} style={{ marginLeft: 'auto' }}>
+                      {formatDateFR(r.createdAt)}
+                    </time>
                   </div>
-                  {r.comment && <p>{r.comment}</p>}
-                  <span className="review-item__date">{new Date(r.createdAt).toLocaleDateString('fr-FR')}</span>
+                  {r.comment ? <p>{r.comment}</p> : <span className="muted review-item__no-comment">Avis sans commentaire.</span>}
                 </div>
               ))}
             </div>
@@ -759,15 +1028,8 @@ export default function ProfessorDashboard() {
         <p className="muted" style={{ marginBottom: '0.75rem' }}>
           {acceptTarget?.studentName} a réservé « {acceptTarget?.offerTitle} » (cours en ligne).
         </p>
-        <Input
-          label="Lien de la séance (optionnel)"
-          id="accept-link"
-          value={acceptLink}
-          onChange={(e) => setAcceptLink(e.target.value)}
-          placeholder="https://meet.google.com/..., https://zoom.us/..."
-        />
-        <p className="muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem' }}>
-          L'élève verra ce lien dès que la réservation sera confirmée.
+        <p className="meeting-fields__help" style={{ marginBottom: '0.75rem' }}>
+          {ONLINE_ACCEPT_HINT}
         </p>
         {acceptError && <div className="error-banner" style={{ marginTop: '0.75rem' }}><p>{acceptError}</p></div>}
       </Modal>

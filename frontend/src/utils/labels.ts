@@ -1,4 +1,12 @@
-import type { CourseType, LocationType, DayOfWeek, PaymentMethod, PaymentStatus } from '../types';
+import type { CourseType, LocationType, DayOfWeek, PaymentMethod, PaymentStatus, BookingStatus } from '../types';
+
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
+  PENDING: 'En attente',
+  ACCEPTED: 'Confirmée',
+  REJECTED: 'Refusée',
+  CANCELLED: 'Annulée',
+  COMPLETED: 'Terminée',
+};
 
 export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
   INDIVIDUAL: 'Cours individuel',
@@ -56,12 +64,24 @@ export function formatPaymentStatus(status: string | null | undefined): string {
   return (status && (PAYMENT_STATUS_LABELS as Record<string, string>)[status]) || status || '';
 }
 
+export function formatBookingStatus(status: string | null | undefined): string {
+  return (status && (BOOKING_STATUS_LABELS as Record<string, string>)[status]) || status || '';
+}
+
 export function formatLocationType(type: string | undefined): string {
   return (type && (LOCATION_TYPE_LABELS as Record<string, string>)[type]) || type || '';
 }
 
 export function formatTime(time: string): string {
   return time.length === 5 ? time : time.slice(0, 5);
+}
+
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2, '0')}`;
 }
 
 export function formatDateFR(date: string | Date): string {
@@ -94,6 +114,26 @@ export function formatDateTimeRange(date: string | Date, durationMinutes: number
 export function formatPrice(value: number): string {
   return `${value.toLocaleString('fr-FR')} DH`;
 }
+
+export function isSafeMeetingUrl(url: string | null | undefined): boolean {
+  return typeof url === 'string' && /^https:\/\//i.test(url.trim()) && url.trim().length > 8;
+}
+
+export function safeMeetingUrl(url: string | null | undefined): string | undefined {
+  return isSafeMeetingUrl(url) ? (url as string).trim() : undefined;
+}
+
+export const MEETING_PLATFORMS = ['Zoom', 'Google Meet', 'Microsoft Teams', 'Autre'] as const;
+
+export function isValidMeetingPlatform(value: string | null | undefined): boolean {
+  return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 50;
+}
+
+export const MEETING_LINK_HELP =
+  'Seule une URL https est acceptée. Le lien est attaché à chaque réservation : il sera communiqué à l\'élève uniquement après confirmation. Aucun lien n\'est rendu public sur votre fiche.';
+
+export const ONLINE_ACCEPT_HINT =
+  'Vous pourrez ajouter le lien de la séance juste après l\'acceptation, depuis ce tableau de bord (réservation « En ligne » confirmée).';
 
 export function computeEndTime(start: string, durationMinutes: number): string {
   const [h, m] = start.split(':').map(Number);

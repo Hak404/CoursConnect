@@ -18,11 +18,18 @@ function initials(name?: string): string {
     .toUpperCase();
 }
 
+import { useState } from 'react';
+
 export default function Avatar({ name, src, size = 'md', className }: AvatarProps) {
+  const [broken, setBroken] = useState(false);
   const classes = ['avatar', size !== 'md' ? `avatar--${size}` : '', className || ''].filter(Boolean).join(' ');
   return (
     <span className={classes}>
-      {src ? <img src={src} alt={name || ''} /> : <span>{initials(name)}</span>}
+      {src && !broken ? (
+        <img src={src} alt={name || ''} onError={() => setBroken(true)} />
+      ) : (
+        <span>{initials(name)}</span>
+      )}
     </span>
   );
 }
