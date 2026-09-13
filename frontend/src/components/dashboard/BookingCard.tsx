@@ -13,7 +13,7 @@ import {
 } from '../../services/api';
 import {
   formatDateFR, formatTimeFR, formatLocationType, formatPaymentMethod, formatPaymentStatus,
-  isSafeMeetingUrl, safeMeetingUrl, MEETING_PLATFORMS, ONLINE_ACCEPT_HINT,
+  isSafeMeetingUrl, safeMeetingUrl, MEETING_PLATFORMS, isMeetingPlatformKnown, ONLINE_ACCEPT_HINT,
 } from '../../utils/labels';
 import type { Booking, MeetingConfigData } from '../../types';
 
@@ -231,7 +231,7 @@ export default function BookingCard({ booking, defaultPlatform, onUpdated }: Boo
               >
                 <option value="">— Sélectionner —</option>
                 {MEETING_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                {(booking.meetingPlatform && !MEETING_PLATFORMS.includes(booking.meetingPlatform as never)) && (
+                {(booking.meetingPlatform && !isMeetingPlatformKnown(booking.meetingPlatform)) && (
                   <option value={booking.meetingPlatform}>{booking.meetingPlatform}</option>
                 )}
               </Select>

@@ -125,6 +125,12 @@ export function safeMeetingUrl(url: string | null | undefined): string | undefin
 
 export const MEETING_PLATFORMS = ['Zoom', 'Google Meet', 'Microsoft Teams', 'Autre'] as const;
 
+export type MeetingPlatform = (typeof MEETING_PLATFORMS)[number];
+
+export function isMeetingPlatformKnown(value: string | null | undefined): value is MeetingPlatform {
+  return typeof value === 'string' && MEETING_PLATFORMS.some((p) => p === value);
+}
+
 export function isValidMeetingPlatform(value: string | null | undefined): boolean {
   return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 50;
 }

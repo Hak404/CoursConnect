@@ -16,7 +16,7 @@ import {
 import { useUnreadCount } from '../../hooks/useUnreadCount';
 import {
   formatDateFR, formatTimeFR, formatLocationType, formatPaymentMethod, formatPaymentStatus,
-  isSafeMeetingUrl, safeMeetingUrl, MEETING_PLATFORMS, ONLINE_ACCEPT_HINT,
+  isSafeMeetingUrl, safeMeetingUrl, MEETING_PLATFORMS, isMeetingPlatformKnown, ONLINE_ACCEPT_HINT,
 } from '../../utils/labels';
 import type { Booking, MeetingConfigData, Offer } from '../../types';
 
@@ -263,7 +263,7 @@ export default function ProfessorBookingDetail() {
                     >
                       <option value="">— Sélectionner —</option>
                       {MEETING_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                      {(booking.meetingPlatform && !MEETING_PLATFORMS.includes(booking.meetingPlatform as never)) && (
+                      {(booking.meetingPlatform && !isMeetingPlatformKnown(booking.meetingPlatform)) && (
                         <option value={booking.meetingPlatform}>{booking.meetingPlatform}</option>
                       )}
                     </Select>
