@@ -54,25 +54,25 @@ INSERT INTO levels (name, description, display_order) VALUES
 -- (see docker-compose.yml). No default admin account is created here.
 
 -- Professor users (IDs 2-11)
-INSERT INTO users (first_name, last_name, email, password_hash, phone, role, enabled) VALUES
-('Ahmed', 'El Amrani', 'ahmed.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000001', 'PROFESSOR', TRUE),
-('Fatima', 'Bennani', 'fatima.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000002', 'PROFESSOR', TRUE),
-('Youssef', 'Chakir', 'youssef.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000003', 'PROFESSOR', TRUE),
-('Khadija', 'Ouaziz', 'khadija.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000004', 'PROFESSOR', TRUE),
-('Mohammed', 'Tazi', 'mohammed.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000005', 'PROFESSOR', TRUE),
-('Salma', 'Idrissi', 'salma.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000006', 'PROFESSOR', TRUE),
-('Rachid', 'Berrada', 'rachid.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000007', 'PROFESSOR', TRUE),
-('Nadia', 'Filali', 'nadia.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000008', 'PROFESSOR', TRUE),
-('Khalid', 'Slaoui', 'khalid.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000009', 'PROFESSOR', TRUE),
-('Amina', 'Jabri', 'amina.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000010', 'PROFESSOR', TRUE);
+INSERT INTO users (id, first_name, last_name, email, password_hash, phone, role, enabled) VALUES
+(2, 'Ahmed', 'El Amrani', 'ahmed.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000001', 'PROFESSOR', TRUE),
+(3, 'Fatima', 'Bennani', 'fatima.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000002', 'PROFESSOR', TRUE),
+(4, 'Youssef', 'Chakir', 'youssef.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000003', 'PROFESSOR', TRUE),
+(5, 'Khadija', 'Ouaziz', 'khadija.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000004', 'PROFESSOR', TRUE),
+(6, 'Mohammed', 'Tazi', 'mohammed.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000005', 'PROFESSOR', TRUE),
+(7, 'Salma', 'Idrissi', 'salma.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000006', 'PROFESSOR', TRUE),
+(8, 'Rachid', 'Berrada', 'rachid.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000007', 'PROFESSOR', TRUE),
+(9, 'Nadia', 'Filali', 'nadia.prof@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0661000008', 'PROFESSOR', TRUE),
+(10, 'Khalid', 'Slaoui', 'khalid.prof@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0661000009', 'PROFESSOR', TRUE),
+(11, 'Amina', 'Jabri', 'amina.prof@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0661000010', 'PROFESSOR', TRUE);
 
 -- Student users (IDs 12-16)
-INSERT INTO users (first_name, last_name, email, password_hash, phone, role, enabled) VALUES
-('Omar', 'Alaoui', 'omar.student@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0670000001', 'STUDENT', TRUE),
-('Leila', 'Benkirane', 'leila.student@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0670000002', 'STUDENT', TRUE),
-('Hamza', 'Fassi', 'hamza.student@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0670000003', 'STUDENT', TRUE),
-('Meryem', 'Taleb', 'meryem.student@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0670000004', 'STUDENT', TRUE),
-('Sara', 'Moatassim', 'sara.student@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0670000005', 'STUDENT', TRUE);
+INSERT INTO users (id, first_name, last_name, email, password_hash, phone, role, enabled) VALUES
+(12, 'Omar', 'Alaoui', 'omar.student@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0670000001', 'STUDENT', TRUE),
+(13, 'Leila', 'Benkirane', 'leila.student@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0670000002', 'STUDENT', TRUE),
+(14, 'Hamza', 'Fassi', 'hamza.student@gmail.com', '310000:XYqL95cULSpjBABbhiA6/g==:vqxkWMKK6DSRevQbsJg1qVIHWpmI3tXI/PX1oFxa8ug=', '0670000003', 'STUDENT', TRUE),
+(15, 'Meryem', 'Taleb', 'meryem.student@gmail.com', '310000:4UaB46wuJZSYVLKTgBaqHQ==:0UhdP/pbd/u2AoB/JIoqwk5yaB6KT6ehQrE3AfaAnao=', '0670000004', 'STUDENT', TRUE),
+(16, 'Sara', 'Moatassim', 'sara.student@gmail.com', '310000:ivoO7coPKBqfdMwHyFas1A==:b2Db3TcHtVTbQSOCwKudiKac1sDTKZ4eIrNnWEjaZFc=', '0670000005', 'STUDENT', TRUE);
 
 -- ============================================================
 -- SEED DATA: PROFESSORS

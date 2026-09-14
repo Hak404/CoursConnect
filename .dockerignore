@@ -1,0 +1,27 @@
+# Git
+.git/
+
+# Secrets / env (never baked into the image or build context)
+.env
+.env.*
+
+# Build outputs
+backend/target/
+frontend/node_modules/
+frontend/dist/
+node_modules/
+dist/
+
+# Local runtime data
+wildfly/deployments/
+wildfly/standalone/
+wildfly/domain/
+logs/
+mysql-data/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

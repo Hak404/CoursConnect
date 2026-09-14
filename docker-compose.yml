@@ -24,16 +24,18 @@ services:
       - "8081:8080"
       - "9990:9990"
     environment:
-      MYSQL_HOST: mysql
+      MYSQL_HOST: coursconnect-db
       MYSQL_PORT: 3306
       MYSQL_DATABASE: coursconnect
       MYSQL_USER: root
       MYSQL_PASSWORD: coursconnect
+      MYSQL_SSL_MODE: ${MYSQL_SSL_MODE:-DISABLED}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - ./wildfly/modules:/opt/jboss/wildfly/modules/custom
+      - ./wildfly/scripts:/opt/jboss/wildfly/scripts:ro
       - ./wildfly/deployments:/opt/jboss/wildfly/standalone/deployments
 
 volumes:

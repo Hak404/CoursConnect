@@ -1,1 +1,4 @@
-/subsystem=datasources/data-source=CoursConnectDS:write-attribute(name=connection-url,value="jdbc:mysql://coursconnect-db:3306/coursconnect?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8")
+# Legacy one-off fix: rewrites the UTF-8 connection URL on an existing CoursConnectDS datasource.
+# Superseded by env-driven provisioning: wildfly/scripts/provision-datasource.sh
+# Uses WildFly env expressions with local Docker defaults (coursconnect-db / 3306).
+/subsystem=datasources/data-source=CoursConnectDS:write-attribute(name=connection-url,value="jdbc:mysql://${env.MYSQL_HOST:coursconnect-db}:${env.MYSQL_PORT:3306}/coursconnect?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8")
